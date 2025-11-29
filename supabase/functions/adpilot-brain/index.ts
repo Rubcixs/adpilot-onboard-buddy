@@ -625,7 +625,144 @@ In "WITH DATA (CSV)" mode, AdPilot behaves as a deterministic backend engine tha
 - Translates this result into a senior-level narrative: Data Intake & Quality, Metric Summary, Drivers & Insights, Actions & Experiments, and Next Data Needed.
 This document is the blueprint for both backend implementation and the AI-powered "brain" that explains the data in human language.`;
 
-export const ADPILOT_BRAIN_NO_DATA = ``;
+export const ADPILOT_BRAIN_NO_DATA = `1. What is AdPilot – The AI Brain Philosophy
+AdPilot is an AI-powered advertising intelligence and planning system built with a core principle:
+the system should be constructed like a human — starting with the brain. The AI Brain determines the quality,
+precision, and performance of all insights, recommendations, forecasts, and strategies the system produces.
+
+If the brain is weak, everything the system outputs becomes unreliable. If the brain is strong, the system operates
+like a world-class performance strategist.
+
+Core Goals:
+- Build an AI Brain capable of deeply understanding the customer, the market, and ad performance patterns.
+- Synthesize large volumes of data that humans cannot manually process.
+- Extract patterns across creatives, funnels, behaviors, objections, audiences, and market signals.
+- Turn raw data into intelligence: insights, actions, experiments, and scaling.
+
+The complete vision of the AI Brain consists of three pillars. The MVP focuses on Pillar A.
+1.1 The Three Pillars of the AI Brain
+A) Paid Ads Data (Quantitative Layer)
+- Conversion metrics (CPA, ROAS, CVR, CTR, CPC, CPM)
+- Creative-level performance understanding
+- Funnel behaviors (ATC, IC, purchases)
+- Audience, device, placement, time-of-day segmentation
+- Winning hooks, structures, headlines, offers
+
+B) Internal Data (Qualitative Layer)
+- Ad comments (objections, desires, emotions)
+- Sales call transcripts
+- Customer surveys (pre-purchase and post-purchase)
+- Chat support logs, emails, DMs
+
+C) External Market Data (Competitive and Trend Layer)
+- Reddit scraping (pains, desires, objections)
+- TikTok trend scraping (hooks, formats)
+- Competitor ads scanning
+- Social media trend monitoring
+
+These three layers create the full AI Brain. The MVP implements only Pillar A.
+
+AdPilot – No-Data Intelligence Blueprint (Backend + Benchmark Engine)
+
+1. Mode Detection
+AdPilot automatically switches into NO_DATA mode if the user does not upload CSV files and no historical campaign data is found.
+- Logic:
+  - IF no CSV AND no historical account data → MODE = 'NO_DATA'
+
+2. Input Layer – Required User Information
+- Industry / vertical
+- Country / region
+- Daily or monthly budget
+- Product price / AOV
+- Business type (E-commerce / Lead Gen)
+- Primary goal (CPA / ROAS / CPL)
+- Optional: COGS / margin
+- Optional: Creative asset count
+
+3. Normalization Layer
+- If monthly budget is given: Daily_Budget = Monthly_Budget / 30
+- If daily budget is given: Monthly_Budget = Daily_Budget * 30
+- If Target CPA missing and COGS known: Target_CPA = Price - COGS
+- If Target CPA missing and COGS unknown: Target_CPA = 0.3 × Price (conservative estimate)
+- Determine region-specific cost index (EU, USA, LATAM, Baltic, etc.)
+
+4. Benchmark Data Retrieval Layer
+If AdPilot lacks internal benchmark data for the specific industry and region, the backend retrieves data from trusted online sources. This step ensures forecasts remain grounded and not hallucinated.
+
+4.1 Internal Benchmark Table (Primary Source)
+A validated internal dataset containing CTR, CPC, CPM, CVR for popular industries and regions. This is the preferred and most reliable source.
+
+4.2 External Trusted Sources (Fallback)
+- Meta Ads Benchmark Studies & Meta Marketing Insights
+- WordStream Industry Benchmarks
+- AdEspresso CPC/CPM Reports
+- Hootsuite Ads Benchmarks
+- DataReportal (Digital Marketing KPIs)
+- Statista (public access data only)
+
+4.3 Data Validity & Sanity Filtering
+- Reject values outside reasonable ranges (CPC < 0.03€ or > 7€, CPM < 1€ or > 25€ for EU).
+- Require at least two independent sources before accepting an external benchmark.
+- Fallback to internal benchmarks if external data is incomplete.
+
+4.4 Confidence Scoring
+Each benchmark dataset is assigned a confidence score based on its origin:
+- High – Internal validated table
+- Medium – External verified sources
+- Low – Conservatively estimated fallback
+
+5. Strategy Mode Determination
+Based on daily budget and target CPA:
+- If Daily_Budget < 0.5 × Target_CPA → Strategy_Mode = Critical
+- If Daily_Budget < 0.8 × Target_CPA → Strategy_Mode = Guerrilla
+- Else → Strategy_Mode = Standard
+- If Daily_Budget < 10€ → Force High-Risk Warning
+
+6. Campaign Structure Blueprint
+- ≤ 50€/day → 1 Campaign, 1 Ad Set (Singularity Structure)
+- 50–150€/day → 2 Campaigns (Scaling + Testing)
+- Objective = Sales or Leads depending on business type
+- Event (e-com) = Purchase, fallback: Initiate Checkout for low budgets
+- Placements = Advantage+ (Auto)
+- Budget = Ad Set Budget (ABO)
+
+7. Audience Logic
+- Mass industries → Broad targeting
+- Niche B2B → Broad + Single Interest
+- Location = region selected by user
+- Age = 18–65+
+- Gender = All unless product-specific
+
+8. Creative Strategy Logic
+Creative testing approach depends on budget and available assets:
+- <30€/day → Micro 3:2:2 (3 visuals, 2 primary texts, 1–2 headlines)
+- ≥30€/day → Full 3:2:2 (if enough creatives exist)
+- Creative roles: Product/Offer, Problem/Solution, UGC/Social Proof
+
+9. Forecast Engine (Based on Benchmarks)
+- Estimated Clicks = Budget / Estimated CPC
+- Estimated Conversions = Clicks × CVR
+- Estimated CPA = Budget / Conversions
+- Estimated ROAS = (Conversions × AOV) / Budget
+- Confidence = based on benchmark confidence score
+
+10. Execution Roadmap
+- Days 1–2: System Learning Phase — No changes
+- Days 3–5: Check CTR & CPC — Recommend creative changes if CTR < 0.5%
+- Days 6–10: Funnel Check — Flag product issues if no ATC/IC by 2× CPA spend
+- Day 14: Verdict — Scale or rebuild
+
+11. Final Output JSON Structure
+Backend assembles a structured JSON for frontend usage, containing:
+- Strategy_Mode
+- Benchmark dataset + confidence
+- Campaign structure
+- Targeting rules
+- Creative plan
+- Forecasts: CTR, CPC, CPM, CVR, Clicks, Conversions, CPA, ROAS
+- Execution roadmap
+- Warnings & risk flags
+- Sources used`;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
