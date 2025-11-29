@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, ShoppingBag, Users, Calendar, Download, TrendingUp, Zap, Scale, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,11 +23,20 @@ const priorities = [
 
 const Step2 = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prevState = location.state as Record<string, any> || {};
+  
   const [goal, setGoal] = useState("");
   const [priority, setPriority] = useState("");
 
   const handleNext = () => {
-    navigate("/wizard/step-3");
+    navigate("/wizard/step-3", {
+      state: {
+        ...prevState,
+        goal,
+        priority,
+      },
+    });
   };
 
   const handleBack = () => {

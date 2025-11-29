@@ -22,7 +22,13 @@ const Step1 = () => {
   const [businessType, setBusinessType] = useState("");
 
   const handleNext = () => {
-    navigate("/wizard/step-2");
+    navigate("/wizard/step-2", {
+      state: {
+        businessName,
+        country,
+        businessType,
+      },
+    });
   };
 
   return (
