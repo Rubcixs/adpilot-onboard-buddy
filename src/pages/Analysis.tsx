@@ -410,68 +410,78 @@ const Analysis = () => {
                 )}
 
                 {/* 2. Financial Grid (Middle) */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Opportunities (Green) */}
-                  <Card className="p-6">
-                    <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2 text-accent">
-                      <TrendingUp className="h-5 w-5" />
-                      Profit Opportunities
-                    </h3>
-                    <div className="space-y-3">
-                      {insights?.deepAnalysis?.opportunities?.map((item, i) => (
-                        <div key={i} className="p-3 rounded-lg bg-accent/5 border border-accent/20">
-                          <p className="font-medium text-foreground text-sm mb-1">{item.title}</p>
-                          <p className="text-xs text-muted-foreground">{item.description}</p>
-                        </div>
-                      ))}
-                      {(!insights?.deepAnalysis?.opportunities || insights.deepAnalysis.opportunities.length === 0) && (
-                         <p className="text-sm text-muted-foreground">No immediate scaling opportunities detected.</p>
-                      )}
-                    </div>
-                  </Card>
+                {insights?.deepAnalysis && (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Opportunities (Green) */}
+                    <Card className="p-6">
+                      <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2 text-accent">
+                        <TrendingUp className="h-5 w-5" />
+                        Profit Opportunities
+                      </h3>
+                      <div className="space-y-3">
+                        {insights.deepAnalysis.opportunities?.map((item, i) => (
+                          <div key={i} className="p-3 rounded-lg bg-accent/5 border border-accent/20">
+                            <p className="font-medium text-foreground text-sm mb-1">{item.title}</p>
+                            <p className="text-xs text-muted-foreground">{item.description}</p>
+                          </div>
+                        ))}
+                        {(!insights.deepAnalysis.opportunities || insights.deepAnalysis.opportunities.length === 0) && (
+                           <p className="text-sm text-muted-foreground">No immediate scaling opportunities detected.</p>
+                        )}
+                      </div>
+                    </Card>
 
-                  {/* Money Wasters (Red) */}
-                  <Card className="p-6">
-                    <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2 text-destructive">
-                      <Banknote className="h-5 w-5" />
-                      Budget Leaks
-                    </h3>
-                    <div className="space-y-3">
-                      {insights?.deepAnalysis?.moneyWasters?.map((item, i) => (
-                        <div key={i} className="p-3 rounded-lg bg-destructive/5 border border-destructive/20">
-                          <p className="font-medium text-foreground text-sm mb-1">{item.title}</p>
-                          <p className="text-xs text-muted-foreground">{item.description}</p>
-                        </div>
-                      ))}
-                      {(!insights?.deepAnalysis?.moneyWasters || insights.deepAnalysis.moneyWasters.length === 0) && (
-                         <p className="text-sm text-muted-foreground">No major budget leaks detected.</p>
-                      )}
-                    </div>
-                  </Card>
-                </div>
-
-          {/* 3. Creative Fatigue (Bottom) */}
-          {insights?.deepAnalysis?.creativeFatigue && insights.deepAnalysis.creativeFatigue.length > 0 && (
-            <Card className="p-6 border-warning/50 bg-warning/5">
-              <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2 text-warning">
-                <Megaphone className="h-5 w-5" />
-                Creative Fatigue Warnings
-              </h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                {insights.deepAnalysis.creativeFatigue.map((item, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="h-2 w-2 mt-2 rounded-full bg-warning flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-foreground text-sm">{item.title}</p>
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    </div>
+                    {/* Money Wasters (Red) */}
+                    <Card className="p-6">
+                      <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2 text-destructive">
+                        <Banknote className="h-5 w-5" />
+                        Budget Leaks
+                      </h3>
+                      <div className="space-y-3">
+                        {insights.deepAnalysis.moneyWasters?.map((item, i) => (
+                          <div key={i} className="p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                            <p className="font-medium text-foreground text-sm mb-1">{item.title}</p>
+                            <p className="text-xs text-muted-foreground">{item.description}</p>
+                          </div>
+                        ))}
+                        {(!insights.deepAnalysis.moneyWasters || insights.deepAnalysis.moneyWasters.length === 0) && (
+                           <p className="text-sm text-muted-foreground">No major budget leaks detected.</p>
+                        )}
+                      </div>
+                    </Card>
                   </div>
-                ))}
-              </div>
-            </Card>
-          )}
+                )}
 
-          {/* 4. Segment Analysis (Demographics, Placement, Time) */}
+                {/* 3. Creative Fatigue (Bottom) */}
+                {insights?.deepAnalysis?.creativeFatigue && insights.deepAnalysis.creativeFatigue.length > 0 && (
+                  <Card className="p-6 border-warning/50 bg-warning/5">
+                    <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2 text-warning">
+                      <Megaphone className="h-5 w-5" />
+                      Creative Fatigue Warnings
+                    </h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {insights.deepAnalysis.creativeFatigue.map((item, i) => (
+                        <div key={i} className="flex items-start gap-3">
+                          <div className="h-2 w-2 mt-2 rounded-full bg-warning flex-shrink-0" />
+                          <div>
+                            <p className="font-medium text-foreground text-sm">{item.title}</p>
+                            <p className="text-xs text-muted-foreground">{item.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
+                {/* Fallback message when insights exist but deepAnalysis is missing */}
+                {!insights?.deepAnalysis && (
+                  <div className="text-center p-8 text-muted-foreground">
+                    <p className="mb-2">Deep analysis data is not available for this dataset.</p>
+                    <p className="text-sm">Try uploading a file with more detailed columns (Placement, Age, Gender).</p>
+                  </div>
+                )}
+
+                {/* 4. Segment Analysis (Demographics, Placement, Time) */}
           {insights?.segmentAnalysis && (
             <div className="grid md:grid-cols-3 gap-6">
               {/* Demographics */}
