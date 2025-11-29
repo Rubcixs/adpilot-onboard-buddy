@@ -34,10 +34,10 @@ interface InsightItem {
 
 interface AIInsights {
   insights: {
-    quickVerdict?: string;
-    quickVerdictTone?: "positive" | "negative" | "mixed";
-    bestPerformers?: { id: string; reason: string }[];
-    needsAttention?: { id: string; reason: string }[];
+    quickVerdict: string;
+    quickVerdictTone: "positive" | "negative" | "mixed";
+    bestPerformers: { id: string; reason: string }[];
+    needsAttention: { id: string; reason: string }[];
     whatsWorking: InsightItem[];
     whatsNotWorking: InsightItem[];
   };
@@ -107,13 +107,11 @@ const Analysis = () => {
   const aiInsights = state?.aiInsights;
   const aiInsightsError = state?.aiInsightsError;
   
-  // Check if we have valid AI insights
-  const hasAiInsights = aiInsights?.insights?.whatsWorking && aiInsights?.insights?.whatsNotWorking;
-  const whatsWorking = aiInsights?.insights?.whatsWorking || [];
-  const whatsNotWorking = aiInsights?.insights?.whatsNotWorking || [];
-  
   // Use insights directly from navigation state
   const insights = aiInsights?.insights;
+  const hasAiInsights = !!insights;
+  const whatsWorking = insights?.whatsWorking || [];
+  const whatsNotWorking = insights?.whatsNotWorking || [];
 
   // Format primary KPI for display (simple version without Campaign type)
 
@@ -345,7 +343,7 @@ const Analysis = () => {
                   </Button>
                 </div>
               </Card>
-            ) : !insights?.quickVerdict && !insights?.bestPerformers ? (
+            ) : !hasAiInsights ? (
               <div className="space-y-6">
                 <Card className="p-6">
                   <div className="animate-pulse space-y-4">
@@ -402,99 +400,103 @@ const Analysis = () => {
                   </Button>
                 </div>
               </Card>
-            ) : insights ? (
+            ) : hasAiInsights ? (
               <>
                 {/* Quick Verdict Card */}
-                {insights.quickVerdict && (
-                  <Card 
-                    className={`p-6 ${
-                      insights.quickVerdictTone === "positive" 
-                        ? "bg-accent/5 border-accent"
-                        : insights.quickVerdictTone === "negative"
-                        ? "bg-destructive/5 border-destructive"
-                        : "bg-warning/5 border-warning"
-                    }`}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div 
-                        className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                <Card 
+                  className={`p-6 ${
+                    insights.quickVerdictTone === "positive" 
+                      ? "bg-accent/5 border-accent"
+                      : insights.quickVerdictTone === "negative"
+                      ? "bg-destructive/5 border-destructive"
+                      : "bg-warning/5 border-warning"
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div 
+                      className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        insights.quickVerdictTone === "positive"
+                          ? "bg-accent/20"
+                          : insights.quickVerdictTone === "negative"
+                          ? "bg-destructive/20"
+                          : "bg-warning/20"
+                      }`}
+                    >
+                      <Target 
+                        className={`h-5 w-5 ${
                           insights.quickVerdictTone === "positive"
-                            ? "bg-accent/20"
+                            ? "text-accent"
                             : insights.quickVerdictTone === "negative"
-                            ? "bg-destructive/20"
-                            : "bg-warning/20"
+                            ? "text-destructive"
+                            : "text-warning"
                         }`}
-                      >
-                        <Target 
-                          className={`h-5 w-5 ${
-                            insights.quickVerdictTone === "positive"
-                              ? "text-accent"
-                              : insights.quickVerdictTone === "negative"
-                              ? "text-destructive"
-                              : "text-warning"
-                          }`}
-                        />
-                      </div>
-                      <div>
-                        <h3 className="font-display font-semibold text-foreground mb-2">
-                          Quick Verdict
-                        </h3>
-                        <p className="text-foreground leading-relaxed">
-                          {insights.quickVerdict}
-                        </p>
-                      </div>
+                      />
                     </div>
-                  </Card>
-                )}
+                    <div>
+                      <h3 className="font-display font-semibold text-foreground mb-2">
+                        Quick Verdict
+                      </h3>
+                      <p className="text-foreground leading-relaxed">
+                        {insights.quickVerdict}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
 
                 {/* Best Performers & Needs Attention */}
-                {(insights.bestPerformers || insights.needsAttention) && (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {/* Best Performers */}
-                    {insights.bestPerformers && insights.bestPerformers.length > 0 && (
-                      <Card className="p-6">
-                        <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-                          <TrendingUp className="h-5 w-5 text-accent" />
-                          Best Performers
-                        </h3>
-                        <div className="space-y-3">
-                          {insights.bestPerformers.map((item, idx) => (
-                            <div key={idx} className="flex flex-col gap-1 p-3 rounded-lg bg-muted/50">
-                              <span className="text-sm font-medium text-foreground">
-                                {item.id}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {item.reason}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </Card>
-                    )}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Best Performers */}
+                  <Card className="p-6">
+                    <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-accent" />
+                      Best Performers
+                    </h3>
+                    <div className="space-y-3">
+                      {insights.bestPerformers && insights.bestPerformers.length > 0 ? (
+                        insights.bestPerformers.map((item, idx) => (
+                          <div key={idx} className="flex flex-col gap-1 p-3 rounded-lg bg-muted/50">
+                            <span className="text-sm font-medium text-foreground">
+                              {item.id}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {item.reason}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No top performers identified
+                        </p>
+                      )}
+                    </div>
+                  </Card>
 
-                    {/* Needs Attention */}
-                    {insights.needsAttention && insights.needsAttention.length > 0 && (
-                      <Card className="p-6">
-                        <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-                          <TrendingDown className="h-5 w-5 text-warning" />
-                          Needs Attention
-                        </h3>
-                        <div className="space-y-3">
-                          {insights.needsAttention.map((item, idx) => (
-                            <div key={idx} className="flex flex-col gap-1 p-3 rounded-lg bg-muted/50">
-                              <span className="text-sm font-medium text-foreground">
-                                {item.id}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {item.reason}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </Card>
-                    )}
-                  </div>
-                )}
+                  {/* Needs Attention */}
+                  <Card className="p-6">
+                    <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <TrendingDown className="h-5 w-5 text-warning" />
+                      Needs Attention
+                    </h3>
+                    <div className="space-y-3">
+                      {insights.needsAttention && insights.needsAttention.length > 0 ? (
+                        insights.needsAttention.map((item, idx) => (
+                          <div key={idx} className="flex flex-col gap-1 p-3 rounded-lg bg-muted/50">
+                            <span className="text-sm font-medium text-foreground">
+                              {item.id}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {item.reason}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No campaigns need attention
+                        </p>
+                      )}
+                    </div>
+                  </Card>
+                </div>
 
                 {/* Debug Insights Panel */}
                 <Card className="p-6 bg-muted/30 border-muted">
