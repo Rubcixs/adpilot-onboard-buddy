@@ -151,15 +151,23 @@ serve(async (req) => {
     // Keep only rows that actually have a name (real data rows)
     function isDataRow(row: any): boolean {
       if (!nameCol) return true; // fallback: no name column, keep all
-      const name = String(row[nameCol] ?? "").trim();
-      if (!name) return false;   // no name -> summary / total row
 
-      // Optional extra guard: if spendCol exists and is 0, we can also drop it
+      const rawName = row[nameCol];
+      const name = String(rawName ?? "").trim();
+      if (!name) return false;   // empty name -> summary / total row
+
+      const normalizedName = name.toLowerCase();
+      // ignore rows like "total", "Total", "TOTAL", "Grand total", etc.
+      if (normalizedName === "total" || normalizedName.startsWith("total ") || normalizedName.includes(" total")) {
+        return false;
+      }
+
+      // optional extra guard: drop rows with zero spend, if desired
       if (spendCol) {
         const spend = toNumber(row[spendCol]);
-        // Uncomment next line if you want to drop pure zero rows:
         // if (spend === 0) return false;
       }
+
       return true;
     }
 
