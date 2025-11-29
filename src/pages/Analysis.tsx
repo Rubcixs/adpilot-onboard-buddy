@@ -1,13 +1,22 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronLeft, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target, Lightbulb } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { ChevronLeft, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target, Lightbulb, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
+interface LocationState {
+  rowCount?: number;
+  columnNames?: string[];
+  platform?: string;
+  dataLevel?: string;
+}
+
 const Analysis = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as LocationState | null;
 
   return (
     <div className="min-h-screen bg-gradient-hero">
@@ -41,6 +50,30 @@ const Analysis = () => {
           </h1>
           <p className="text-muted-foreground">Meta Ads • Campaign Level • Last 30 days</p>
         </div>
+
+        {/* CSV Summary Card */}
+        {state?.rowCount !== undefined && state?.columnNames && (
+          <Card className="p-6 mb-6 bg-primary/5 border-primary/20">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <FileSpreadsheet className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-display font-semibold text-foreground mb-2">
+                  CSV Data Summary
+                </h3>
+                <p className="text-foreground mb-1">
+                  <span className="text-muted-foreground">Total rows:</span>{" "}
+                  <span className="font-semibold">{state.rowCount}</span>
+                </p>
+                <p className="text-foreground">
+                  <span className="text-muted-foreground">Columns:</span>{" "}
+                  <span className="font-medium">{state.columnNames.join(", ")}</span>
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-card">
