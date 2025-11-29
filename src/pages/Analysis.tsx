@@ -36,7 +36,7 @@ interface LocationState {
   dataLevel?: string;
   metrics?: Metrics;
   aiInsights?: AIInsights | null;
-  aiError?: boolean;
+  aiInsightsError?: string | null;
 }
 
 // Formatting helpers
@@ -73,7 +73,7 @@ const Analysis = () => {
   const state = location.state as LocationState | null;
   const metrics = state?.metrics;
   const aiInsights = state?.aiInsights;
-  const aiError = state?.aiError;
+  const aiInsightsError = state?.aiInsightsError;
   
   // Check if we have valid AI insights
   const hasAiInsights = aiInsights?.insights?.whatsWorking && aiInsights?.insights?.whatsNotWorking;
@@ -330,14 +330,16 @@ const Analysis = () => {
                       AI Insights Not Available
                     </h3>
                     <p className="text-muted-foreground max-w-md">
-                      {aiError 
-                        ? "We couldn't generate AI insights for your data. Please try re-uploading your CSV."
-                        : "AI insights are being generated. If this persists, try re-uploading your CSV."
-                      }
+                      We couldn't generate AI insights for your data. Please try re-uploading your CSV.
                     </p>
+                    {aiInsightsError && (
+                      <p className="text-xs text-destructive/70 mt-2 font-mono max-w-md">
+                        Error: {aiInsightsError}
+                      </p>
+                    )}
                   </div>
                   <Button 
-                    variant="outline" 
+                    variant="outline"
                     onClick={() => navigate("/upload")}
                     className="mt-2"
                   >

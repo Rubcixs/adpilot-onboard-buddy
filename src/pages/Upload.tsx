@@ -96,7 +96,7 @@ const Upload = () => {
             columnNames: data.columnNames,
             metrics: data.metrics,
             aiInsights: data.aiInsights,
-            aiError: data.aiError,
+            aiInsightsError: data.aiInsightsError,
             platform,
             dataLevel 
           } 
