@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronLeft, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target, Lightbulb, FileSpreadsheet, Banknote, Megaphone, Activity, ArrowRight } from "lucide-react";
+import { ChevronLeft, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target, Lightbulb, FileSpreadsheet, Banknote, Megaphone, Activity, ArrowRight, Users, Monitor, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,6 +45,11 @@ interface AIInsights {
       opportunities: { title: string; description: string }[];
       moneyWasters: { title: string; description: string }[];
       creativeFatigue: { title: string; description: string }[];
+    };
+    segmentAnalysis?: {
+      demographics: string;
+      placement: string;
+      time: string;
     };
   };
 }
@@ -445,29 +450,67 @@ const Analysis = () => {
                   </Card>
                 </div>
 
-                {/* 3. Creative Fatigue (Bottom) */}
-                {insights?.deepAnalysis?.creativeFatigue && insights.deepAnalysis.creativeFatigue.length > 0 && (
-                  <Card className="p-6 border-warning/50 bg-warning/5">
-                    <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2 text-warning">
-                      <Megaphone className="h-5 w-5" />
-                      Creative Fatigue Warnings
-                    </h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {insights.deepAnalysis.creativeFatigue.map((item, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          <div className="h-2 w-2 mt-2 rounded-full bg-warning flex-shrink-0" />
-                          <div>
-                            <p className="font-medium text-foreground text-sm">{item.title}</p>
-                            <p className="text-xs text-muted-foreground">{item.description}</p>
-                          </div>
-                        </div>
-                      ))}
+          {/* 3. Creative Fatigue (Bottom) */}
+          {insights?.deepAnalysis?.creativeFatigue && insights.deepAnalysis.creativeFatigue.length > 0 && (
+            <Card className="p-6 border-warning/50 bg-warning/5">
+              <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2 text-warning">
+                <Megaphone className="h-5 w-5" />
+                Creative Fatigue Warnings
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {insights.deepAnalysis.creativeFatigue.map((item, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="h-2 w-2 mt-2 rounded-full bg-warning flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-foreground text-sm">{item.title}</p>
+                      <p className="text-xs text-muted-foreground">{item.description}</p>
                     </div>
-                  </Card>
-                )}
-              </>
-            )}
-          </TabsContent>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* 4. Segment Analysis (Demographics, Placement, Time) */}
+          {insights?.segmentAnalysis && (
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Demographics */}
+              <Card className="p-6">
+                <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Demographics
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {insights.segmentAnalysis.demographics || "No age/gender breakdown found in CSV."}
+                </p>
+              </Card>
+
+              {/* Placement */}
+              <Card className="p-6">
+                <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Monitor className="h-5 w-5 text-blue-500" />
+                  Placements
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {insights.segmentAnalysis.placement || "No placement breakdown found in CSV."}
+                </p>
+              </Card>
+
+              {/* Time / Day */}
+              <Card className="p-6">
+                <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-orange-500" />
+                  Best Times
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {insights.segmentAnalysis.time || "No daily breakdown found in CSV."}
+                </p>
+              </Card>
+            </div>
+          )}
+        </>
+      )}
+    </TabsContent>
 
           {/* Recommendations Tab */}
           <TabsContent value="recommendations" className="space-y-6">
