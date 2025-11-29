@@ -77,10 +77,30 @@ const Results = () => {
     );
   }
 
+  // Get currency symbol based on country
+  const getCurrencySymbol = (country: string | undefined) => {
+    const euroCountries = ["Germany", "France", "Spain", "Italy", "Netherlands", "Belgium", "Austria", "Portugal", "Ireland", "Finland", "Greece", "DE", "FR", "ES", "IT", "NL", "BE", "AT", "PT", "IE", "FI", "GR"];
+    const gbpCountries = ["United Kingdom", "UK", "GB"];
+    
+    if (euroCountries.some(c => country?.toLowerCase().includes(c.toLowerCase()))) return "€";
+    if (gbpCountries.some(c => country?.toLowerCase().includes(c.toLowerCase()))) return "£";
+    return "$";
+  };
+
+  const currencySymbol = getCurrencySymbol(userInput?.country);
+
   const formatBudget = (budget: number | string | undefined) => {
-    if (budget === undefined || budget === "not-sure") return "Not specified";
-    if (typeof budget === "number") return `$${budget.toLocaleString()}/month`;
+    if (budget === undefined || budget === "not-sure") return null; // Return null to hide from header
+    if (typeof budget === "number") return `${currencySymbol}${budget.toLocaleString()}/month`;
     return budget;
+  };
+
+  const formatCurrency = (value: string | number | undefined) => {
+    if (!value) return null;
+    const numStr = String(value).replace(/[^0-9.-]/g, "");
+    const num = parseFloat(numStr);
+    if (isNaN(num)) return value;
+    return `${currencySymbol}${num.toLocaleString()}`;
   };
 
   // Extract data with fallbacks for different key casings
@@ -218,7 +238,7 @@ const Results = () => {
             </div>
             <div className="text-center">
               <p className="text-3xl font-display font-bold text-accent-foreground mb-1">
-                {forecasts.cpa || forecasts.CPA || forecasts.cost_per_result || "$20-40"}
+                {forecasts.cpa || forecasts.CPA || forecasts.cost_per_result || `${currencySymbol}20-40`}
               </p>
               <p className="text-sm text-accent-foreground/80">
                 {userInput.goal === "More leads" ? "Cost per lead" : "Cost per sale (CPA)"}
@@ -240,7 +260,7 @@ const Results = () => {
         <Card className="p-6 mb-6">
           <h2 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-primary" />
-            Recommended Budget Allocation ({formatBudget(userInput.monthlyBudget)})
+            Recommended Budget Allocation{formatBudget(userInput.monthlyBudget) ? ` (${formatBudget(userInput.monthlyBudget)})` : ""}
           </h2>
           <div className="space-y-3">
             {displayBudgetAllocation.map((item: any, i: number) => (
@@ -324,7 +344,11 @@ const Results = () => {
               <>
                 <div className="p-3 rounded-lg bg-muted/50">
                   <p className="text-xs text-muted-foreground mb-1">Primary Audience</p>
-                  <p className="font-medium text-foreground">{userInput.customer || "Based on your customer profile"}</p>
+                  <p className="font-medium text-foreground">
+                    {userInput.customer === "notsure" || !userInput.customer 
+                      ? "Broad Targeting (AI Recommended)" 
+                      : userInput.customer}
+                  </p>
                 </div>
                 <div className="p-3 rounded-lg bg-muted/50">
                   <p className="text-xs text-muted-foreground mb-1">Location</p>
@@ -345,8 +369,10 @@ const Results = () => {
             {normalizedCreatives.length > 0 ? (
               normalizedCreatives.map((item: any, i: number) => (
                 <div key={i} className="p-4 rounded-lg bg-muted/50 border border-border">
-                  <p className="font-medium text-foreground mb-1">{item.angle}</p>
-                  {item.description && <p className="text-sm text-muted-foreground">{item.description}</p>}
+                  <p className="font-medium text-foreground mb-1">{item.angle || item.title || item.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {item.description || item.detail || item.explanation || "Creative angle for your campaigns"}
+                  </p>
                 </div>
               ))
             ) : (
