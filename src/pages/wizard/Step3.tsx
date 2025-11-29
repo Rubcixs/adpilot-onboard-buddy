@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,13 +9,26 @@ import WizardProgress from "@/components/WizardProgress";
 
 const Step3 = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prevState = location.state as Record<string, any> || {};
+  
   const [customer, setCustomer] = useState("");
   const [customCustomer, setCustomCustomer] = useState("");
   const [offer, setOffer] = useState("");
   const [customOffer, setCustomOffer] = useState("");
+  const [productPrice, setProductPrice] = useState<string>("");
 
   const handleNext = () => {
-    navigate("/wizard/step-4");
+    navigate("/wizard/step-4", {
+      state: {
+        ...prevState,
+        customer: customer || customCustomer,
+        customCustomer,
+        offer: offer || customOffer,
+        customOffer,
+        productPrice: productPrice ? parseFloat(productPrice) : null,
+      },
+    });
   };
 
   const handleBack = () => {
@@ -119,6 +132,24 @@ const Step3 = () => {
                 placeholder="Or describe your own offer..."
                 className="mt-3"
               />
+            </div>
+
+            {/* Product Price */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Average Product Price ($)
+              </label>
+              <Input
+                type="number"
+                value={productPrice}
+                onChange={(e) => setProductPrice(e.target.value)}
+                placeholder="e.g., 49.99"
+                min="0"
+                step="0.01"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                This helps us estimate potential revenue and ROAS
+              </p>
             </div>
 
             {/* Help Text */}
