@@ -139,6 +139,25 @@ const Analysis = () => {
           </Card>
         )}
 
+        {/* Debug Metrics Card */}
+        {metrics && (
+          <Card className="p-6 mb-6 bg-muted/30 border-muted">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display font-semibold text-foreground mb-3">
+                  Debug Metrics
+                </h3>
+                <pre className="text-xs font-mono whitespace-pre-wrap bg-background/50 p-4 rounded-lg overflow-x-auto">
+                  {JSON.stringify(metrics, null, 2)}
+                </pre>
+              </div>
+            </div>
+          </Card>
+        )}
+
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-card">
             <TabsTrigger value="overview">Overview</TabsTrigger>
