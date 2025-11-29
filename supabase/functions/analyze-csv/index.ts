@@ -10,6 +10,10 @@ const ADPILOT_BRAIN_WITH_DATA = `You are AdPilot, an expert AI advertising analy
 
 Your task: Given CSV metrics with funnel context, identify what's working, what's not working, and provide a professional deep dive analysis.
 
+INPUT DATA:
+- You will receive "segments" (Age, Placement, Day of Week) IF the CSV had breakdowns.
+- If segments are empty arrays, skip those insights completely.
+
 Guidelines:
 - Be specific and data-driven in your observations
 - Reference actual numbers from the metrics when possible
@@ -18,6 +22,7 @@ Guidelines:
 - Consider CTR, CPA, ROAS, spend distribution, conversion patterns, and funnel health
 - Adapt your analysis to the campaign goal (purchases, leads, traffic, awareness)
 - Identify opportunities, budget leaks, and creative fatigue signals
+- Analyze segment data (age, placement, day) when provided
 
 You MUST respond with ONLY valid JSON in this exact format:
 {
@@ -52,6 +57,11 @@ You MUST respond with ONLY valid JSON in this exact format:
       "creativeFatigue": [
         { "title": "Fatigue signal title", "description": "Creative refresh or rotation needed" }
       ]
+    },
+    "segmentAnalysis": {
+      "demographics": "Analyze Age/Gender performance if data exists. Example: '18-24 is cheapest (CPM $5) but 35-44 has best ROAS (3.2). Skip if no age data.",
+      "placement": "Analyze Platform/Placement if data exists. Example: 'IG Stories driving 60% of sales at lowest CPA.' Skip if no placement data.",
+      "time": "Analyze Day of Week trends if data exists. Example: 'Weekends have 2x higher conversion rate than weekdays.' Skip if no day data."
     }
   }
 }
@@ -61,7 +71,8 @@ Limits:
 - needsAttention: Max 3 items
 - whatsWorking/whatsNotWorking: Max 3-5 items
 - opportunities/moneyWasters: 2-4 items each
-- creativeFatigue: 0-3 items (only if evident)`;
+- creativeFatigue: 0-3 items (only if evident)
+- segmentAnalysis: Only include insights if segment data was provided (check if arrays are not empty)`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -161,6 +172,12 @@ serve(async (req) => {
     const clicksCol = getCol("Clicks (all)");
     const purchasesCol = getCol("Purchases");
     const revenueCol = getCol("Purchases conversion value");
+
+    // Breakdown columns for segment analysis
+    const ageCol = columns.find(h => h.toLowerCase().includes('age'));
+    const genderCol = columns.find(h => h.toLowerCase() === 'gender');
+    const placementCol = columns.find(h => h.toLowerCase().includes('placement') || h.toLowerCase().includes('platform'));
+    const dayCol = getCol("Reporting starts");
 
     console.log('Column mapping:', { spendCol, impressionsCol, clicksCol, purchasesCol, revenueCol });
 
@@ -387,6 +404,23 @@ serve(async (req) => {
     // Group data by the detected primary name column (Ad name > Ad set name > Campaign name)
     const rowMap = new Map<string, { spend: number; impressions: number; clicks: number; results: number; revenue: number }>();
     
+    // Segment analysis maps
+    const ageMap = new Map<string, any>();
+    const placementMap = new Map<string, any>();
+    const dayMap = new Map<string, any>();
+
+    // Helper to aggregate stats
+    const addToMap = (map: Map<string, any>, key: string, row: any) => {
+      if (!key || key === '' || key === 'null') return;
+      const existing = map.get(key) || { spend: 0, results: 0, revenue: 0, impressions: 0, clicks: 0 };
+      existing.spend += spendCol ? toNumber(row[spendCol]) : 0;
+      existing.results += purchasesCol ? toNumber(row[purchasesCol]) : (leadsCol ? toNumber(row[leadsCol]) : 0);
+      existing.revenue += revenueCol ? toNumber(row[revenueCol]) : 0;
+      existing.impressions += impressionsCol ? toNumber(row[impressionsCol]) : 0;
+      existing.clicks += clicksCol ? toNumber(row[clicksCol]) : 0;
+      map.set(key, existing);
+    };
+    
     // Use the nameCol we detected earlier (lines 147-158)
     if (nameCol) {
       for (const row of dataRows) {
@@ -409,6 +443,22 @@ serve(async (req) => {
         
         existing.revenue += revenueCol ? toNumber(row[revenueCol]) : 0;
         rowMap.set(entityName, existing);
+
+        // Aggregate segment data
+        if (ageCol) addToMap(ageMap, String(row[ageCol] ?? "").trim(), row);
+        if (placementCol) addToMap(placementMap, String(row[placementCol] ?? "").trim(), row);
+        
+        if (dayCol && row[dayCol]) {
+          try {
+            const date = new Date(row[dayCol]);
+            if (!isNaN(date.getTime())) {
+              const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+              addToMap(dayMap, dayName, row);
+            }
+          } catch (e) {
+            // Ignore invalid dates
+          }
+        }
       }
     }
 
@@ -453,6 +503,19 @@ serve(async (req) => {
     const totalResults = goal === "purchases" ? totalPurchases : (goal === "leads" ? totalLeads : totalClicks);
     const conversionRate = totalClicks > 0 ? (totalResults / totalClicks) * 100 : 0;
     
+    // Helper to format segment maps to list sorted by Spend
+    const formatStats = (map: Map<string, any>) => 
+      Array.from(map.entries())
+        .map(([key, val]) => ({
+          key, 
+          spend: round(val.spend, 2),
+          roas: val.spend > 0 ? round(val.revenue / val.spend, 2) : 0,
+          cpa: val.results > 0 ? round(val.spend / val.results, 2) : 0,
+          ctr: val.impressions > 0 ? round((val.clicks / val.impressions) * 100, 2) : 0
+        }))
+        .sort((a, b) => b.spend - a.spend)
+        .slice(0, 5); // Top 5 only
+
     // Build enriched analysis summary for Claude
     const analysisSummary = {
       analysisLevel: nameCol || "unknown",
@@ -483,6 +546,11 @@ serve(async (req) => {
       },
       topPerformers,
       worstPerformers,
+      segments: {
+        age: formatStats(ageMap),
+        placement: formatStats(placementMap),
+        dayOfWeek: formatStats(dayMap)
+      }
     };
 
     console.log('Analysis summary for Claude:', JSON.stringify(analysisSummary, null, 2));
