@@ -31,7 +31,12 @@ const Results = () => {
   const location = useLocation();
   const state = location.state as LocationState | null;
   
-  const { plan, userInput } = state || {};
+  // Try multiple possible locations for userInput
+  const plan = state?.plan;
+  const userInput = state?.userInput || (state as any)?.completeData || {};
+  
+  console.log("Location state:", state);
+  console.log("User Input:", userInput);
 
   // Parse the raw AI response to extract the actual data
   const aiData = useMemo(() => {
@@ -108,7 +113,7 @@ const Results = () => {
   const campaignStructure = aiData?.Campaign_Structure || aiData?.campaign_structure || aiData?.campaigns || [];
   const targeting = aiData?.Targeting_Rules || aiData?.Targeting || aiData?.targeting || aiData?.audiences || [];
   const budgetAllocation = aiData?.Budget_Allocation || aiData?.budget_allocation || aiData?.budgetAllocation || [];
-  const creativeAngles = aiData?.Creative_Angles || aiData?.creative_angles || aiData?.creativeAngles || [];
+  const creativeAngles = aiData?.Creative_Plan || aiData?.creative_plan || aiData?.Creative_Angles || aiData?.creative_angles || aiData?.creativeAngles || [];
   const checklist = aiData?.Checklist || aiData?.checklist || aiData?.setup_checklist || [];
   const summary = aiData?.Summary || aiData?.summary || aiData?.overview || "";
 
@@ -149,7 +154,10 @@ const Results = () => {
     ? creativeAngles.map((item: any) =>
         typeof item === 'string'
           ? { angle: item, description: "" }
-          : { angle: item.angle || item.name || item.title || "Creative", description: item.description || item.detail || "" }
+          : { 
+              angle: item.angle || item.name || item.title || item.concept || "Creative", 
+              description: item.description || item.detail || item.explanation || item.hook || item.message || "" 
+            }
       )
     : [];
 
