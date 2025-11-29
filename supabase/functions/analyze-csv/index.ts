@@ -103,8 +103,14 @@ serve(async (req) => {
     let hasResults = resultsCol !== null;
     let hasRevenue = revenueCol !== null;
 
-    // Collect sample rows (first 50) for AI analysis
+    // Collect sample rows (first 10) for AI analysis - only key columns to reduce token usage
     const sampleRows: Record<string, string>[] = [];
+    const keyColumns = [
+      "Campaign name", "Ad set name", "Ad name",
+      "Amount spent (EUR)", "Impressions", "Clicks (all)", 
+      "CTR (all)", "CPC (all) (EUR)", "Purchases", "Purchases conversion value"
+    ];
+    const availableKeyColumns = keyColumns.filter(col => columnNames.includes(col));
     
     for (let i = 1; i < lines.length; i++) {
       const row = parseCSVLine(lines[i]);
@@ -115,11 +121,12 @@ serve(async (req) => {
       if (hasResults) totalResults += toNumber(row[resultsCol!]);
       if (hasRevenue) totalRevenue += toNumber(row[revenueCol!]);
       
-      // Collect sample rows (up to 50)
-      if (i <= 50) {
+      // Collect sample rows (up to 10, key columns only)
+      if (i <= 10) {
         const rowObj: Record<string, string> = {};
-        columnNames.forEach((col, idx) => {
-          rowObj[col] = row[idx] || '';
+        availableKeyColumns.forEach(col => {
+          const idx = columnNames.indexOf(col);
+          if (idx >= 0) rowObj[col] = row[idx] || '';
         });
         sampleRows.push(rowObj);
       }
@@ -150,11 +157,14 @@ serve(async (req) => {
 
     // Call Claude for AI insights
     let aiInsights = null;
-    let aiError = false;
+    let aiInsightsError: string | null = null;
     
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
     
-    if (anthropicApiKey) {
+    if (!anthropicApiKey) {
+      aiInsightsError = 'ANTHROPIC_API_KEY not configured';
+      console.warn('ANTHROPIC_API_KEY not configured, skipping AI insights');
+    } else {
       try {
         console.log('Calling Claude for AI insights...');
         
@@ -184,8 +194,8 @@ serve(async (req) => {
 
         if (!claudeResponse.ok) {
           const errorText = await claudeResponse.text();
-          console.error('Claude API error:', claudeResponse.status, errorText);
-          aiError = true;
+          aiInsightsError = `Claude API error ${claudeResponse.status}: ${errorText}`;
+          console.error('Claude insights error:', aiInsightsError);
         } else {
           const claudeData = await claudeResponse.json();
           console.log('Claude response received');
@@ -198,27 +208,24 @@ serve(async (req) => {
               // Parse the JSON response from Claude
               aiInsights = JSON.parse(textContent);
               console.log('AI insights parsed successfully');
-            } catch (parseError) {
-              console.error('Failed to parse Claude response as JSON:', parseError);
+            } catch (parseError: any) {
+              aiInsightsError = `JSON parse error: ${parseError?.message || 'Invalid JSON from Claude'}`;
+              console.error('Claude insights error:', aiInsightsError);
               console.log('Raw Claude response:', textContent);
-              aiError = true;
             }
           } else {
-            console.error('No text content in Claude response');
-            aiError = true;
+            aiInsightsError = 'No text content in Claude response';
+            console.error('Claude insights error:', aiInsightsError);
           }
         }
-      } catch (claudeError) {
-        console.error('Error calling Claude:', claudeError);
-        aiError = true;
+      } catch (err: any) {
+        aiInsightsError = err?.message || 'Unknown Claude error';
+        console.error('Claude insights error:', aiInsightsError, err);
       }
-    } else {
-      console.warn('ANTHROPIC_API_KEY not configured, skipping AI insights');
-      aiError = true;
     }
 
     return new Response(
-      JSON.stringify({ ok: true, rowCount, columnNames, metrics, aiInsights, aiError }),
+      JSON.stringify({ ok: true, rowCount, columnNames, metrics, aiInsights, aiInsightsError }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
