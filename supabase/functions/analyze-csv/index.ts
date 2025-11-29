@@ -194,21 +194,6 @@ serve(async (req) => {
     const cpa = totalResults > 0 ? totalSpend / totalResults : null;
     const roas = totalSpend > 0 ? totalRevenue / totalSpend : null;
 
-    // Collect sample rows (first 10) for AI analysis - only key columns to reduce token usage
-    const keyColumns = [
-      "Campaign name", "Ad set name", "Ad name",
-      "Amount spent (EUR)", "Impressions", "Clicks (all)",
-      "CTR (all)", "CPC (all) (EUR)", "Purchases", "Purchases conversion value"
-    ];
-    const availableKeyColumns = keyColumns.filter(col => columnNames.includes(col));
-    const sampleRows = dataRows.slice(0, 10).map(row => {
-      const sample: Record<string, string> = {};
-      availableKeyColumns.forEach(col => {
-        sample[col] = row[col] || '';
-      });
-      return sample;
-    });
-
     // Compute derived metrics
     const metrics = {
       totalSpend: spendCol ? round(totalSpend, 2) : null,
@@ -224,6 +209,76 @@ serve(async (req) => {
 
     console.log('Computed metrics:', metrics);
 
+    // --- Build campaign-level summaries for Claude ---
+    // Group data by campaign name
+    const campaignMap = new Map<string, { spend: number; impressions: number; clicks: number; results: number; revenue: number }>();
+    const campaignNameCol = columns.includes("Campaign name") ? "Campaign name" : null;
+
+    if (campaignNameCol) {
+      for (const row of dataRows) {
+        const campName = String(row[campaignNameCol] ?? "").trim();
+        if (!campName) continue;
+
+        const existing = campaignMap.get(campName) || { spend: 0, impressions: 0, clicks: 0, results: 0, revenue: 0 };
+        existing.spend += spendCol ? toNumber(row[spendCol]) : 0;
+        existing.impressions += impressionsCol ? toNumber(row[impressionsCol]) : 0;
+        existing.clicks += clicksCol ? toNumber(row[clicksCol]) : 0;
+        existing.results += purchasesCol ? toNumber(row[purchasesCol]) : 0;
+        existing.revenue += revenueCol ? toNumber(row[revenueCol]) : 0;
+        campaignMap.set(campName, existing);
+      }
+    }
+
+    // Convert to array with computed metrics
+    const campaignSummaries = Array.from(campaignMap.entries()).map(([name, data]) => ({
+      name,
+      spend: round(data.spend, 2),
+      impressions: data.impressions,
+      clicks: data.clicks,
+      results: data.results,
+      ctr: data.impressions > 0 ? round((data.clicks / data.impressions) * 100, 2) : null,
+      cpc: data.clicks > 0 ? round(data.spend / data.clicks, 2) : null,
+      cpa: data.results > 0 ? round(data.spend / data.results, 2) : null,
+      roas: data.spend > 0 ? round(data.revenue / data.spend, 2) : null,
+    }));
+
+    // Top 10 campaigns by spend
+    const topCampaigns = [...campaignSummaries]
+      .sort((a, b) => b.spend - a.spend)
+      .slice(0, 10);
+
+    // Worst 10 campaigns: highest CPA (where results > 0) or lowest ROAS
+    const worstCampaigns = [...campaignSummaries]
+      .filter(c => c.results && c.results > 0) // only campaigns with conversions
+      .sort((a, b) => {
+        // Sort by CPA descending (worst first), fallback to ROAS ascending
+        if (a.cpa !== null && b.cpa !== null) return b.cpa - a.cpa;
+        if (a.roas !== null && b.roas !== null) return a.roas - b.roas;
+        return 0;
+      })
+      .slice(0, 10);
+
+    // Build compact analysis summary for Claude
+    const analysisSummary = {
+      accountMetrics: {
+        totalSpend: metrics.totalSpend,
+        totalImpressions: metrics.totalImpressions,
+        totalClicks: metrics.totalClicks,
+        totalResults: metrics.totalResults,
+        totalRevenue: metrics.totalRevenue,
+        avgCtr: metrics.ctr,
+        avgCpc: metrics.cpc,
+        avgCpa: metrics.cpa,
+        avgRoas: metrics.roas,
+        totalCampaigns: campaignSummaries.length,
+        totalRows: dataRows.length,
+      },
+      topCampaigns,
+      worstCampaigns,
+    };
+
+    console.log('Analysis summary for Claude:', JSON.stringify(analysisSummary, null, 2));
+
     // Call Claude for AI insights
     let aiInsights = null;
     let aiInsightsError: string | null = null;
@@ -237,12 +292,7 @@ serve(async (req) => {
       try {
         console.log('Calling Claude for AI insights...');
         
-        const userMessage = JSON.stringify({
-          metrics,
-          columnNames,
-          sampleRows,
-          rowCount
-        });
+        const userMessage = `Analyze this Meta Ads account data and provide insights on what's working and what's not working.\n\n${JSON.stringify(analysisSummary)}`;
 
         const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
