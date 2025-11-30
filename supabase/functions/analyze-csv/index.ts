@@ -5,20 +5,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// System prompt for AI analysis - Pattern Hunter Mode
+// System prompt for AI analysis - Strict Fact-Checker
 const ADPILOT_BRAIN_WITH_DATA = `You are an API endpoint.
-ROLE: Data Analyst & Pattern Hunter.
-INPUT: Ad performance metrics + Segment Breakdowns (Age, Gender, Placement, Day).
+ROLE: Data Analyst (Strict Fact-Checker).
+INPUT: Ad metrics & Segment data.
 OUTPUT: Valid JSON only.
 
 RESPONSE STRUCTURE (Must be exact JSON):
 {
   "insights": {
     "healthScore": 0,
-    "quickVerdict": "Executive summary of the account status.",
+    "quickVerdict": "Executive summary using REAL data only.",
     "quickVerdictTone": "positive" | "negative" | "mixed",
-    "bestPerformers": [ { "id": "NAME", "reason": "ROAS 4.x" } ],
-    "needsAttention": [ { "id": "NAME", "reason": "CPA $50" } ],
+    "bestPerformers": [ { "id": "EXACT_CAMPAIGN_NAME", "reason": "ROAS 4.1" } ],
+    "needsAttention": [ { "id": "EXACT_CAMPAIGN_NAME", "reason": "CPA $50" } ],
     "whatsWorking": [
        { "title": "Brief title", "detail": "Specific observation with data" }
     ],
@@ -28,41 +28,27 @@ RESPONSE STRUCTURE (Must be exact JSON):
     "deepAnalysis": {
       "funnelHealth": { 
          "status": "Healthy" | "Leaky" | "Broken", 
-         "title": "Funnel Health", 
-         "description": "Analyze CTR -> CVR flow with specific % metrics.", 
+         "title": "Funnel Status", 
+         "description": "Analyze CTR -> CVR flow. Cite metrics.", 
          "metricToWatch": "CVR" 
       },
       "opportunities": [
-         { "title": "Scale Opportunity", "description": "High ROAS campaign with specific metrics", "impact": "High Revenue" }
+         { "title": "Scale Opportunity", "description": "Identify specific campaign to scale.", "impact": "High Revenue" }
       ],
       "moneyWasters": [
-         { "title": "Budget Leak", "description": "High spend / low result with specific numbers", "impact": "Cost Savings" }
+         { "title": "Budget Leak", "description": "Identify inefficient spend.", "impact": "Cost Savings" }
       ],
       "creativeFatigue": []
     },
-    "segmentAnalysis": {
-       "demographics": {
-          "title": "Best Audience",
-          "finding": "e.g. 'Women 25-34 are driving 60% of sales at lowest CPA ($12).'"
-       },
-       "placement": {
-          "title": "Top Platform",
-          "finding": "e.g. 'Instagram Stories outperform Feeds by 2x in ROAS.'"
-       },
-       "time": {
-          "title": "Peak Performance",
-          "finding": "e.g. 'Weekends (Sat-Sun) convert 30% better than weekdays.'"
-       }
-    }
+    "segmentAnalysis": null
   }
 }
 
-CRITICAL RULES:
-1. **LOOK FOR PATTERNS:** Use the provided segment data to find the best performing Age, Gender, Placement, and Day.
-2. **CITE DATA:** Every finding MUST include a number (e.g. "CPA $15" or "ROAS 3.2").
-3. **IF DATA MISSING:** If segment data is empty or null, set "segmentAnalysis" to null. Do NOT hallucinate segments.
-4. **NO FAKE DATA:** Use only actual campaign/ad names from topPerformers/worstPerformers lists.
-5. **RAW JSON ONLY:** No markdown. First character '{', last character '}'.
+CRITICAL ANTI-HALLUCINATION RULES:
+1. **NO "CAMPAIGN A":** You are strictly FORBIDDEN from using names like "Campaign A", "Campaign B", "Ad Set 1". You MUST use the exact strings found in the 'topPerformers' or 'worstPerformers' input lists.
+2. **NO FAKE SEGMENTS:** Check the input 'segments' object. If 'age', 'placement', or 'time' lists are empty, you MUST set "segmentAnalysis": null. Do NOT invent "Women 25-34" or "Instagram Stories" if the data is not there.
+3. **CITE REAL NUMBERS:** Every finding must use a number from the input.
+4. **RAW JSON ONLY.** First character '{', last character '}'.
 `;
 
 serve(async (req) => {
