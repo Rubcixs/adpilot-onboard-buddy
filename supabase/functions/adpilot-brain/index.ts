@@ -72,14 +72,27 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
   try {
-    const { goal, budget, aov, industry, description } = await req.json();
+    const body = await req.json();
+    console.log('Received request body:', JSON.stringify(body));
+    
+    // Handle both direct and nested data structures
+    const requestData = body.type === 'no-data' ? body.data : body;
+    
+    // Extract and map fields
+    const goal = requestData.goal;
+    const budget = requestData.budget;
+    const aov = requestData.productPrice || requestData.aov; // Map productPrice to aov
+    const industry = requestData.businessType || requestData.industry; // Map businessType to industry
+    const description = requestData.businessName || requestData.description || '';
+
+    console.log('Extracted data:', { goal, budget, aov, industry, description });
 
     if (!budget || !goal || !aov || !industry) {
-      throw new Error('Missing required inputs: budget, goal, AOV, or industry.');
+      throw new Error(`Missing required inputs. Received: budget=${budget}, goal=${goal}, aov=${aov}, industry=${industry}`);
     }
 
-    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
-    if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY not configured.");
+    const lovableKey = Deno.env.get('LOVABLE_API_KEY')
+    if (!lovableKey) throw new Error("LOVABLE_API_KEY not configured.");
     
     const userPayload = {
       goal,
@@ -91,30 +104,41 @@ serve(async (req) => {
 
     console.log(`Generating zero-data forecast for: ${JSON.stringify(userPayload)}`);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${lovableKey}`,
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-latest',
+        model: 'google/gemini-2.5-flash',
         max_tokens: 2000,
         temperature: 0.3,
-        system: ADPILOT_BRAIN_NO_DATA,
-        messages: [{ 
-          role: 'user', 
-          content: `User Inputs: ${JSON.stringify(userPayload)}` 
-        }]
+        messages: [
+          { 
+            role: 'system', 
+            content: ADPILOT_BRAIN_NO_DATA 
+          },
+          { 
+            role: 'user', 
+            content: `User Inputs: ${JSON.stringify(userPayload)}` 
+          }
+        ]
       }),
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Lovable AI error:', response.status, errorText);
+      throw new Error(`Lovable AI failed: ${response.status}`);
+    }
+
     const aiData = await response.json();
+    console.log('AI response:', JSON.stringify(aiData));
     let forecastInsights = null;
 
-    if (aiData.content && aiData.content[0]?.text) {
-      forecastInsights = JSON.parse(cleanJson(aiData.content[0].text));
+    if (aiData.choices && aiData.choices[0]?.message?.content) {
+      forecastInsights = JSON.parse(cleanJson(aiData.choices[0].message.content));
     } else {
       throw new Error("AI did not return a valid forecast structure.");
     }
