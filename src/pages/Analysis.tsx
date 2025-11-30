@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Target,
   Lightbulb,
-  FileSpreadsheet,
   Banknote,
   Megaphone,
   Activity,
@@ -166,44 +165,6 @@ const Analysis = () => {
           </p>
         </div>
 
-        {/* CSV Summary Card */}
-        {state?.rowCount !== undefined && state?.columnNames && (
-          <Card className="p-6 mb-6 bg-primary/5 border-primary/20">
-            <div className="flex items-start gap-4">
-              <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <FileSpreadsheet className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-display font-semibold text-foreground mb-2">CSV Data Summary</h3>
-                <p className="text-foreground mb-1">
-                  <span className="text-muted-foreground">Total rows:</span>{" "}
-                  <span className="font-semibold">{state.rowCount}</span>
-                </p>
-                <p className="text-foreground">
-                  <span className="text-muted-foreground">Columns:</span>{" "}
-                  <span className="font-medium">{state.columnNames.join(", ")}</span>
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Debug Metrics Card */}
-        {metrics && (
-          <Card className="p-6 mb-6 bg-muted/30 border-muted">
-            <div className="flex items-start gap-4">
-              <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-display font-semibold text-foreground mb-3">Debug Metrics</h3>
-                <pre className="text-xs font-mono whitespace-pre-wrap bg-background/50 p-4 rounded-lg overflow-x-auto">
-                  {JSON.stringify(metrics, null, 2)}
-                </pre>
-              </div>
-            </div>
-          </Card>
-        )}
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-card">
