@@ -492,6 +492,20 @@ serve(async (req) => {
         }))
         .sort((a, b) => b.spend - a.spend)
         .slice(0, 5); // Top 5 only
+    
+    // Check if segments have actual data
+    const hasAgeData = ageMap.size > 0;
+    const hasPlacementData = placementMap.size > 0;
+    const hasDayData = dayMap.size > 0;
+    
+    // Only include segments if they have real data
+    const segmentsForAI = (hasAgeData || hasPlacementData || hasDayData) ? {
+      age: hasAgeData ? formatStats(ageMap) : [],
+      placement: hasPlacementData ? formatStats(placementMap) : [],
+      dayOfWeek: hasDayData ? formatStats(dayMap) : []
+    } : null;
+
+    console.log('Segments status:', { hasAgeData, hasPlacementData, hasDayData });
 
     // Build enriched analysis summary for Claude
     const analysisSummary = {
@@ -523,11 +537,7 @@ serve(async (req) => {
       },
       topPerformers,
       worstPerformers,
-      segments: {
-        age: formatStats(ageMap),
-        placement: formatStats(placementMap),
-        dayOfWeek: formatStats(dayMap)
-      }
+      segments: segmentsForAI
     };
 
     console.log('Analysis summary for Claude:', JSON.stringify(analysisSummary, null, 2));
@@ -547,9 +557,12 @@ serve(async (req) => {
         
         const userMessage = `Analyze this Meta Ads account data and provide insights on what's working and what's not working.
 
-You MUST respond with raw JSON only.
+CRITICAL: You MUST respond with raw JSON only.
 Do NOT include any backticks, code fences, or markdown formatting.
 The first character of your reply must be { and the last character must be }.
+
+IMPORTANT: Use ONLY the exact campaign names from "topPerformers" and "worstPerformers" lists. Do NOT invent names like "Campaign A".
+If segments data is null or empty arrays, you MUST set "segmentAnalysis": null.
 
 ${JSON.stringify(analysisSummary)}`;
 
@@ -563,6 +576,7 @@ ${JSON.stringify(analysisSummary)}`;
           body: JSON.stringify({
             model: 'claude-sonnet-4-20250514',
             max_tokens: 1024,
+            temperature: 0.1,
             system: ADPILOT_BRAIN_WITH_DATA,
             messages: [
               { role: 'user', content: userMessage }
