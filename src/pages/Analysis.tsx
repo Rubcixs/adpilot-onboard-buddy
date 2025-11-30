@@ -18,12 +18,15 @@ import {
   Info,
   Smartphone,
   CalendarClock,
+  Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface Metrics {
   totalSpend: number | null;
@@ -77,6 +80,7 @@ interface LocationState {
   metrics?: Metrics;
   aiInsights?: AIInsights | null;
   aiInsightsError?: string | null;
+  rawData?: Record<string, any>[];
 }
 
 // Formatting helpers
@@ -131,6 +135,8 @@ const Analysis = () => {
   const metrics = state?.metrics;
   const aiInsights = state?.aiInsights;
   const aiInsightsError = state?.aiInsightsError;
+  const rawData = state?.rawData || [];
+  const columnNames = state?.columnNames || [];
   
   // Use insights directly from navigation state
   const insights = aiInsights?.insights;
@@ -637,6 +643,65 @@ const Analysis = () => {
               </div>
             </Card>
 
+          </TabsContent>
+
+          {/* Raw Data Tab */}
+          <TabsContent value="raw" className="space-y-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Database className="h-5 w-5 text-primary" />
+                  <h3 className="font-display font-semibold text-foreground">Uploaded Data</h3>
+                </div>
+                <Badge variant="outline">
+                  {state?.rowCount || rawData.length} rows • {columnNames.length} columns
+                </Badge>
+              </div>
+              
+              {rawData.length > 0 ? (
+                <ScrollArea className="w-full whitespace-nowrap rounded-md border">
+                  <div className="max-h-[600px] overflow-auto">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-background z-10">
+                        <TableRow>
+                          {columnNames.map((col, idx) => (
+                            <TableHead key={idx} className="min-w-[120px] font-medium">
+                              {col}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rawData.map((row, rowIdx) => (
+                          <TableRow key={rowIdx}>
+                            {columnNames.map((col, colIdx) => (
+                              <TableCell key={colIdx} className="text-sm">
+                                {row[col] !== undefined && row[col] !== null 
+                                  ? String(row[col]).substring(0, 50) 
+                                  : "—"}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Database className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">No raw data available</p>
+                  <p className="text-sm text-muted-foreground/70">Upload a CSV file to see the data here</p>
+                </div>
+              )}
+              
+              {rawData.length > 0 && rawData.length < (state?.rowCount || 0) && (
+                <p className="text-sm text-muted-foreground mt-4 text-center">
+                  Showing first {rawData.length} of {state?.rowCount} rows
+                </p>
+              )}
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
