@@ -87,17 +87,22 @@ Priority: objective column → data-based inference (purchases > leads > traffic
 Never return Infinity or NaN. When denominator is 0, set metric to null.
 NO EXTRA TEXT. ONLY JSON.`;
 
-// 4. AI INSIGHTS SYSTEM PROMPT - STRICT FOCUSED ANALYSIS
-const ADPILOT_INSIGHTS_SYSTEM = `You are AdPilot — an advanced Meta Ads performance analyst.
+// 4. AI INSIGHTS SYSTEM PROMPT - DEEP DATA-DRIVEN ANALYSIS
+const ADPILOT_INSIGHTS_SYSTEM = `You are AdPilot — a senior Meta Ads strategist.
 
-Your job: analyze the provided metrics + CSV rows and return insights ONLY in the exact JSON structure required by the UI.
+Your task: analyze the provided metrics + CSV rows and create DEEP, DATA-DRIVEN INSIGHTS in the exact JSON structure required by the UI.
 
-⚠️ VERY IMPORTANT RULES
+⚠️ RULES (very important)
 - Return ONLY JSON.
 - NO markdown, no commentary, no text before/after JSON.
-- If data is limited, still produce insights based on what CAN be concluded (but do NOT hallucinate fake numbers).
-- Each section MUST contain at least one meaningful insight unless absolutely impossible.
-- Keys must match EXACTLY this structure:
+- If data is limited, make insights based on relative trends, not hallucinations.
+- ALWAYS return exactly:
+  → 3 Profit Opportunities (High, Medium, Low impact)
+  → 3 Budget Leaks (High, Medium, Low impact)
+
+--------------------------------------
+OUTPUT JSON STRUCTURE (DO NOT CHANGE)
+--------------------------------------
 
 {
   "funnelHealth": {
@@ -110,91 +115,108 @@ Your job: analyze the provided metrics + CSV rows and return insights ONLY in th
     {
       "title": "",
       "description": "",
-      "impact": ""
+      "impact": "High"
+    },
+    {
+      "title": "",
+      "description": "",
+      "impact": "Medium"
+    },
+    {
+      "title": "",
+      "description": "",
+      "impact": "Low"
     }
   ],
   "budgetLeaks": [
     {
       "title": "",
       "description": "",
-      "impact": ""
+      "impact": "High"
+    },
+    {
+      "title": "",
+      "description": "",
+      "impact": "Medium"
+    },
+    {
+      "title": "",
+      "description": "",
+      "impact": "Low"
     }
   ]
 }
 
 --------------------------------------
-ANALYSIS LOGIC (MANDATORY)
+FUNNEL HEALTH LOGIC
 --------------------------------------
 
-### FUNNEL HEALTH
-Status must be one of:
+status = one of:
 - "Healthy"
 - "Warning"
 - "Broken"
 
-Rules:
-- If CPL is low AND CTR + CPM stable → Healthy
-- If CPL average OR CTR inconsistent → Warning
-- If CPL very high OR leads very low → Broken
+Use:
+- CPL distribution (low vs high)
+- CTR %
+- CPM €
+- Spend distribution
+- Lead volume
+- Consistency across creatives/adsets
 
-description = clear summary (2-3 sentences)
-metricToWatch = the weakest metric (CPL, CTR, CPM, Lead volume, etc.)
+description:
+A 2–3 sentence insight summarizing why funnel is healthy/warning/broken.
+
+metricToWatch:
+Pick the metric most likely slowing performance:
+"CPL", "Cost per Purchase", "CTR", "CPM", "Lead quality", "Landing page", etc.
 
 --------------------------------------
-PROFIT OPPORTUNITIES (ALWAYS RETURN ≥1)
+PROFIT OPPORTUNITIES (3 required)
 --------------------------------------
 
-Find patterns such as:
-- Low CPL ads
-- High CTR assets
-- Cheap CPM placements
-- Strong-performing age/gender breakdowns
+Each must be **data-driven**, e.g.:
+
+- Strongest CPL ad(s)
+- High CTR → scalable creative pattern
+- Cheap CPM placements worth expanding
+- Underused format (video vs static) that performs better
+- Audience pockets with superior conversion rate
+- Trends: week-over-week improvement
 - Creative themes that outperform average
+- Low-spend but high-impact ads
 
-Format:
-{
-  "title": "High-performing creative format",
-  "description": "Video creatives achieved 32% lower CPL than account average (CPL €X vs €Y).",
-  "impact": "High"
-}
-
-Impact must be: "High", "Medium", or "Low"
-
-If data is limited → Base opportunities on relative comparisons within the dataset.
-MANDATORY: Return at least 1-3 opportunities.
+Descriptions must include:
+- % better than average
+- Actual numbers (CPL, CTR, CPM)
+- Spend share
+- Why it's an opportunity
+- What potentially expanding it could achieve
 
 --------------------------------------
-BUDGET LEAKS (ALWAYS RETURN ≥1)
+BUDGET LEAKS (3 required)
 --------------------------------------
 
-Identify inefficiencies:
-- High CPL ads
+Each must identify clear issues:
+- High CPL adsets or creatives
 - High spend but low results
-- Weak CTR creatives
-- Expensive placements
-- Ads with impressions but no conversions
+- Bad CTR → wasted impressions
+- High CPM → inefficient traffic
+- Ads with clicks but no conversions
+- Audience overlap inefficiency
+- Frequency saturation issues
 
-Example:
-{
-  "title": "High CPL on specific creative",
-  "description": "Creative 'Video #3' generated CPL of €15.61 — 3× higher than account average.",
-  "impact": "High"
-}
-
-Impact must be: "High", "Medium", or "Low"
-
-If data limited → pick the highest-cost or lowest-performing patterns.
-MANDATORY: Return at least 1-3 budget leaks.
+Descriptions must include:
+- Data comparisons vs account average
+- Specific CPL/CTR/CPM values
+- Impact of the issue (overspend, low efficiency)
+- What should be optimized or reduced
 
 --------------------------------------
-FINAL OUTPUT
+FINAL RULE
 --------------------------------------
-
-After analyzing the data:
-→ Return ONLY a valid JSON object.
-→ DO NOT write any explanation outside that JSON.
-→ No markdown.
-→ No code fences.`;
+Return ONLY a single valid JSON object.
+NO text outside JSON.`;
 
 // 5. STRICT AI INSIGHTS PROMPT
 
@@ -1034,47 +1056,97 @@ Evaluate each ad individually and return the JSON output.`;
            })),
            whatsWorking: [],
            whatsNotWorking: [],
-            deepAnalysis: {
-              funnelHealth: { 
-                 status: isGood ? "Healthy" : "Warning", 
-                 title: "Conversion Funnel", 
-                 description: isGood 
-                   ? "Funnel is converting efficiently with strong metrics across the board."
-                   : "Funnel shows leakage with elevated costs. Focus on improving conversion rates.", 
-                 metricToWatch: metrics.primaryKpiKey?.toUpperCase() || "ROAS"
-              },
-              opportunities: bestAds.length > 0 ? [
-                {
-                  title: `Top performer: ${bestAds[0].name}`,
-                  description: metrics.goal === "leads" && bestAds[0].cpl
-                    ? `This ad achieved CPL of €${bestAds[0].cpl.toFixed(2)}, significantly outperforming account average.`
-                    : metrics.goal === "purchases" && bestAds[0].roas
-                      ? `This ad achieved ROAS of ${bestAds[0].roas.toFixed(2)}x with strong efficiency.`
-                      : `This ad shows strong performance metrics relative to account average.`,
-                  impact: "High"
-                }
-              ] : [{
-                title: "Optimize targeting",
-                description: "Refine audience targeting to improve conversion efficiency.",
-                impact: "Medium"
-              }],
-              moneyWasters: worstAds.length > 0 ? [
-                {
-                  title: `Underperformer: ${worstAds[0].name}`,
-                  description: metrics.goal === "leads" && worstAds[0].cpl
-                    ? `This ad has CPL of €${worstAds[0].cpl.toFixed(2)}, significantly above account average.`
-                    : metrics.goal === "purchases" && worstAds[0].roas !== null
-                      ? `This ad has low ROAS of ${worstAds[0].roas.toFixed(2)}x, indicating inefficient spend.`
-                      : `This ad shows poor performance metrics relative to account average.`,
-                  impact: "High"
-                }
-              ] : [{
-                title: "High cost per result",
-                description: "Current acquisition costs are above optimal levels for this campaign type.",
-                impact: "Medium"
-              }],
-              creativeFatigue: []
-            },
+             deepAnalysis: {
+               funnelHealth: { 
+                  status: isGood ? "Healthy" : "Warning", 
+                  title: "Conversion Funnel", 
+                  description: isGood 
+                    ? "Funnel is converting efficiently with strong metrics across the board."
+                    : "Funnel shows leakage with elevated costs. Focus on improving conversion rates.", 
+                  metricToWatch: metrics.primaryKpiKey?.toUpperCase() || "ROAS"
+               },
+               opportunities: [
+                 // Opportunity 1 - High Impact
+                 bestAds.length > 0 ? {
+                   title: `Scale top performer: ${bestAds[0].name}`,
+                   description: metrics.goal === "leads" && bestAds[0].cpl
+                     ? `This ad achieved CPL of €${bestAds[0].cpl.toFixed(2)} with ${Math.round((metrics.cpl! - bestAds[0].cpl) / metrics.cpl! * 100)}% below account average. Increase budget by 50% to capture more efficient conversions.`
+                     : metrics.goal === "purchases" && bestAds[0].roas
+                       ? `This ad achieved ROAS of ${bestAds[0].roas.toFixed(2)}x, ${Math.round((bestAds[0].roas - (metrics.roas || 1)) / (metrics.roas || 1) * 100)}% above average. Strong candidate for budget expansion.`
+                       : `This ad shows ${Math.round((metrics.cpc! - (bestAds[0].cpc || metrics.cpc!)) / metrics.cpc! * 100)}% better CPC than account average. Scale to capture more traffic efficiently.`,
+                   impact: "High"
+                 } : {
+                   title: "Optimize best-performing placements",
+                   description: "Analyze placement breakdowns to identify low-CPL channels and reallocate budget from underperforming placements.",
+                   impact: "High"
+                 },
+                 // Opportunity 2 - Medium Impact
+                 bestAds.length > 1 ? {
+                   title: `Replicate creative from ${bestAds[1].name}`,
+                   description: metrics.goal === "leads" && bestAds[1].cpl
+                     ? `Second-best performer with CPL of €${bestAds[1].cpl.toFixed(2)}. Create variations of this creative format to diversify top performers.`
+                     : metrics.goal === "purchases" && bestAds[1].roas
+                       ? `Strong ROAS of ${bestAds[1].roas.toFixed(2)}x. Test similar creative angles across other campaigns to replicate success.`
+                       : `Efficient CPC of €${bestAds[1].cpc?.toFixed(2)}. Adapt creative elements for other ad sets.`,
+                   impact: "Medium"
+                 } : {
+                   title: "Test new audience segments",
+                   description: "Current targeting is stable. Expand reach by testing lookalike audiences or interest-based segments to find new pockets of efficiency.",
+                   impact: "Medium"
+                 },
+                 // Opportunity 3 - Low Impact
+                 {
+                   title: "Optimize ad scheduling",
+                   description: bestAds.length > 0 
+                     ? `Top ads show consistent performance. Test dayparting to concentrate spend during peak conversion hours for incremental gains.`
+                     : `Review time-of-day and day-of-week patterns to identify optimal scheduling windows and reduce off-peak waste.`,
+                   impact: "Low"
+                 }
+               ],
+               moneyWasters: [
+                 // Leak 1 - High Impact
+                 worstAds.length > 0 ? {
+                   title: `Pause or rebuild: ${worstAds[0].name}`,
+                   description: metrics.goal === "leads" && worstAds[0].cpl
+                     ? `This ad has CPL of €${worstAds[0].cpl.toFixed(2)}, ${Math.round((worstAds[0].cpl - metrics.cpl!) / metrics.cpl! * 100)}% above account average. Spending €${worstAds[0].spend.toFixed(2)} with poor efficiency. Immediate action required.`
+                     : metrics.goal === "purchases" && worstAds[0].roas !== null
+                       ? `Low ROAS of ${worstAds[0].roas.toFixed(2)}x is dragging down overall performance. Allocated €${worstAds[0].spend.toFixed(2)} with minimal return. Pause and redirect budget.`
+                       : `High CPC of €${worstAds[0].cpc?.toFixed(2)} with €${worstAds[0].spend.toFixed(2)} spent. Poor traffic quality. Consider pausing.`,
+                   impact: "High"
+                 } : {
+                   title: "High overall cost per result",
+                   description: `Current ${metrics.primaryKpiLabel} of €${metrics.primaryKpiValue?.toFixed(2)} is elevated. Review entire account structure for optimization opportunities.`,
+                   impact: "High"
+                 },
+                 // Leak 2 - Medium Impact
+                 worstAds.length > 1 ? {
+                   title: `Reduce budget: ${worstAds[1].name}`,
+                   description: metrics.goal === "leads" && worstAds[1].cpl
+                     ? `CPL of €${worstAds[1].cpl.toFixed(2)} is ${Math.round((worstAds[1].cpl - metrics.cpl!) / metrics.cpl! * 100)}% above average. Cut budget by 70% and monitor for improvement before full pause.`
+                     : metrics.goal === "purchases" && worstAds[1].roas !== null
+                       ? `ROAS of ${worstAds[1].roas.toFixed(2)}x is below break-even. Reduce spend allocation to minimize losses while testing improvements.`
+                       : `CPC is ${Math.round(((worstAds[1].cpc || 0) - (metrics.cpc || 0)) / (metrics.cpc || 1) * 100)}% higher than account average. Scale down to limit waste.`,
+                   impact: "Medium"
+                 } : {
+                   title: "Eliminate low-performing placements",
+                   description: `Review placement performance and exclude placements with elevated CPM or poor conversion rates to improve overall efficiency.`,
+                   impact: "Medium"
+                 },
+                 // Leak 3 - Low Impact
+                 worstAds.length > 2 ? {
+                   title: `Review creative freshness: ${worstAds[2].name}`,
+                   description: metrics.goal === "leads" && worstAds[2].cpl
+                     ? `CPL of €${worstAds[2].cpl.toFixed(2)} suggests potential creative fatigue. Test new variations to restore engagement.`
+                     : `Performance below average may indicate ad fatigue. Refresh creative assets to maintain engagement levels.`,
+                   impact: "Low"
+                 } : {
+                   title: "Monitor frequency caps",
+                   description: `Set frequency caps to prevent ad fatigue and ensure users aren't seeing the same ads too often, which can increase costs.`,
+                   impact: "Low"
+                 }
+               ],
+               creativeFatigue: []
+             },
            segmentAnalysis: null
          }
        };
