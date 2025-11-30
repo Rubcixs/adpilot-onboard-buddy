@@ -6,37 +6,53 @@ const corsHeaders = {
 };
 
 // System prompt for AI analysis with Deep Dive
-const ADPILOT_BRAIN_WITH_DATA = `You are AdPilot, an elite media buyer AI.
-Your Goal: Analyze ad performance based on the user's KPI.
+const ADPILOT_BRAIN_WITH_DATA = `You are an API endpoint. You receive CSV metrics and return ONLY a JSON object.
 
-INPUT DATA:
-- "context": Goal, KPI.
-- "funnelMetrics": CTR, CPC, Conversion Rates.
-- "segments": (Optional) Age, Gender, Placement data.
+ROLE: Expert Media Buyer Analysis Engine.
+INPUT: Ad performance metrics and context.
+OUTPUT: Valid JSON only. NO conversational text. NO markdown formatting.
 
-OUTPUT FORMAT (JSON ONLY):
+RESPONSE STRUCTURE (Must be exact):
 {
   "insights": {
-    "quickVerdict": "Summary string...",
-    "quickVerdictTone": "positive" | "negative" | "mixed",
-    "bestPerformers": [{ "id": "Name", "reason": "ROAS 4.5" }],
-    "needsAttention": [{ "id": "Name", "reason": "CPA $50" }],
-    "whatsWorking": [{ "title": "Brief title", "detail": "Specific observation with data" }],
-    "whatsNotWorking": [{ "title": "Brief title", "detail": "Specific observation with data" }],
+    "quickVerdict": "Direct summary of performance (e.g. 'Campaigns are profitable with ROAS 3.5').",
+    "quickVerdictTone": "positive", 
+    "bestPerformers": [
+       { "id": "Campaign A", "reason": "ROAS 4.2 (Target 2.0)" }
+    ],
+    "needsAttention": [
+       { "id": "Campaign B", "reason": "CPA $50 (Target $20)" }
+    ],
+    "whatsWorking": [
+       { "title": "Brief title", "detail": "Specific observation with data" }
+    ],
+    "whatsNotWorking": [
+       { "title": "Brief title", "detail": "Specific observation with data" }
+    ],
     "deepAnalysis": {
-      "funnelHealth": { "status": "Healthy"|"Broken", "title": "...", "description": "...", "metricToWatch": "..." },
-      "opportunities": [{ "title": "...", "description": "..." }],
-      "moneyWasters": [{ "title": "...", "description": "..." }],
-      "creativeFatigue": [{ "title": "...", "description": "..." }]
+      "funnelHealth": { 
+         "status": "Leaky", 
+         "title": "Funnel Issue", 
+         "description": "High CTR but low CVR indicates landing page issues.", 
+         "metricToWatch": "Conversion Rate" 
+      },
+      "opportunities": [
+         { "title": "Scale Campaign A", "description": "High ROAS and low frequency." }
+      ],
+      "moneyWasters": [
+         { "title": "Stop Campaign B", "description": "High spend with zero results." }
+      ],
+      "creativeFatigue": [] 
     },
     "segmentAnalysis": null
   }
 }
 
-IMPORTANT:
-1. Output RAW JSON only. Do not wrap in markdown or code fences.
-2. Do NOT include introductory text like "Here is the JSON".
-3. Set "segmentAnalysis" to null if input segments are missing/empty.
+CRITICAL RULES:
+1. Do NOT write "Here is the JSON".
+2. Do NOT use markdown code fences.
+3. Start response with '{' and end with '}'.
+4. Ensure all JSON syntax is valid (quotes, commas).
 `;
 
 serve(async (req) => {
@@ -618,14 +634,19 @@ ${JSON.stringify(analysisSummary)}`;
 
 // Clean JSON response from AI (remove markdown, extract JSON object)
 function cleanJson(text: string): string {
-  // Remove markdown code fences
+  // 1. Remove markdown code blocks (```json ... ```)
   let cleaned = text.replace(/```json/g, '').replace(/```/g, '');
-  // Find the first '{' and last '}'
+  
+  // 2. Find the absolute first '{' and last '}' to strip any intro/outro text
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
+  
   if (firstBrace >= 0 && lastBrace >= 0) {
     cleaned = cleaned.substring(firstBrace, lastBrace + 1);
   }
+  
+  // 3. Remove any "Here is the JSON" type text if it somehow survived
+  // (The brace substring usually fixes this, but just in case)
   return cleaned.trim();
 }
 
