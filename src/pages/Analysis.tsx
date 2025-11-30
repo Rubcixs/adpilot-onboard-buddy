@@ -19,6 +19,7 @@ import {
   Smartphone,
   CalendarClock,
   Database,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -560,88 +561,145 @@ const Analysis = () => {
             )}
           </TabsContent>
 
-          {/* Recommendations Tab */}
+          {/* Recommendations Tab - Action-Focused */}
           <TabsContent value="recommendations" className="space-y-6">
-            <Card className="p-6">
+            {/* Priority Action Items */}
+            <Card className="p-6 border-l-4 border-l-primary">
               <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-accent" />
-                Scaling Opportunities
+                <Target className="h-5 w-5 text-primary" />
+                Priority Actions This Week
               </h3>
-              <div className="space-y-4">
-                {insights?.deepAnalysis?.opportunities?.map((rec, i) => (
-                  <div key={i} className="p-4 rounded-lg border border-accent/20 bg-accent/5">
-                    <div className="flex items-start justify-between mb-2">
-                      <p className="font-medium text-foreground">{rec.title}</p>
-                      <div className="flex gap-2">
-                        <Badge className="bg-accent/10 text-accent border-accent/20">
-                          Impact: {rec.impact || 'High'}
-                        </Badge>
-                      </div>
+              <div className="space-y-3">
+                {/* Generate action items from insights */}
+                {insights?.deepAnalysis?.opportunities?.slice(0, 2).map((opp, i) => (
+                  <div key={`action-${i}`} className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                    <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-primary">{i + 1}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{rec.description}</p>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">Scale: {opp.title.replace(/^Scale top performer: |^Replicate creative from /, '')}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Increase budget by 30-50% to capture more efficient conversions</p>
+                    </div>
                   </div>
                 ))}
-                {!insights?.deepAnalysis?.opportunities?.length && (
-                  <p className="text-muted-foreground text-sm py-2">
-                    No immediate scaling opportunities found by the AI.
-                  </p>
+                {insights?.deepAnalysis?.moneyWasters?.slice(0, 1).map((leak, i) => (
+                  <div key={`leak-action-${i}`} className="flex items-start gap-3 p-3 rounded-lg bg-destructive/5 border border-destructive/10">
+                    <div className="h-6 w-6 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-destructive">{(insights?.deepAnalysis?.opportunities?.slice(0, 2).length || 0) + i + 1}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">Pause: {leak.title.replace(/^Pause or rebuild: |^Reduce budget: /, '')}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Stop spend immediately to prevent further losses</p>
+                    </div>
+                  </div>
+                ))}
+                {!insights?.deepAnalysis?.opportunities?.length && !insights?.deepAnalysis?.moneyWasters?.length && (
+                  <p className="text-muted-foreground text-sm py-2">No priority actions identified.</p>
                 )}
               </div>
             </Card>
 
+            {/* Quick Wins vs Strategic Changes */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="p-6">
+                <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-accent" />
+                  Quick Wins (Do Today)
+                </h3>
+                <ul className="space-y-3">
+                  {insights?.bestPerformers?.slice(0, 2).map((performer, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                      <span>Duplicate <strong>{performer.id}</strong> and test new audience</span>
+                    </li>
+                  ))}
+                  {insights?.needsAttention?.slice(0, 1).map((item, i) => (
+                    <li key={`pause-${i}`} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                      <span>Set daily budget cap on <strong>{item.id}</strong></span>
+                    </li>
+                  ))}
+                  <li className="flex items-start gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                    <span>Review placement performance and exclude underperformers</span>
+                  </li>
+                </ul>
+              </Card>
+
+              <Card className="p-6">
+                <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Strategic Changes (This Week)
+                </h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2 text-sm">
+                    <ArrowRight className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Restructure ad sets by performance tier</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm">
+                    <ArrowRight className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Create lookalike audiences from top converters</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm">
+                    <ArrowRight className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Test dayparting based on conversion patterns</span>
+                  </li>
+                  {insights?.deepAnalysis?.funnelHealth?.status === "Warning" && (
+                    <li className="flex items-start gap-2 text-sm">
+                      <ArrowRight className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span>Review landing page to improve funnel conversion</span>
+                    </li>
+                  )}
+                </ul>
+              </Card>
+            </div>
+
+            {/* Creative Recommendations */}
             <Card className="p-6">
               <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Banknote className="h-5 w-5 text-destructive" />
-                Budget Leaks & Money Wasters
+                <Megaphone className="h-5 w-5 text-warning" />
+                Creative Testing Ideas
               </h3>
-              <div className="space-y-4">
-                {insights?.deepAnalysis?.moneyWasters?.map((rec, i) => (
-                  <div key={i} className="p-4 rounded-lg border border-destructive/20 bg-destructive/5">
-                    <div className="flex items-start justify-between mb-2">
-                      <p className="font-medium text-foreground">{rec.title}</p>
-                      <div className="flex gap-2">
-                        <Badge className="bg-destructive/10 text-destructive border-destructive/20">
-                          Impact: {rec.impact || 'Savings'}
-                        </Badge>
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{rec.description}</p>
-                  </div>
-                ))}
-                {!insights?.deepAnalysis?.moneyWasters?.length && (
-                  <p className="text-muted-foreground text-sm py-2">
-                    Budget utilization looks highly efficient.
-                  </p>
-                )}
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <p className="font-medium text-sm mb-2">Hook Variations</p>
+                  <p className="text-xs text-muted-foreground">Test 3 new opening hooks in your top ad creative</p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <p className="font-medium text-sm mb-2">Format Testing</p>
+                  <p className="text-xs text-muted-foreground">Convert top static ads to video/carousel format</p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <p className="font-medium text-sm mb-2">UGC Content</p>
+                  <p className="text-xs text-muted-foreground">Add user-generated content to refresh creative pool</p>
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6">
-              <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-primary" />
-                Creative Ideas & Fatigue
-              </h3>
-              <div className="space-y-4">
-                {insights?.deepAnalysis?.creativeFatigue?.map((rec, i) => (
-                  <div key={i} className="p-4 rounded-lg border border-border bg-card">
-                    <div className="flex items-start justify-between mb-2">
-                      <p className="font-medium text-foreground">{rec.title}</p>
-                      <div className="flex gap-2">
-                        <Badge className="bg-primary/10 text-primary border-primary/20">
-                          Impact: {rec.impact || 'Medium'}
-                        </Badge>
-                      </div>
+            {/* Budget Reallocation */}
+            {(insights?.deepAnalysis?.opportunities?.length || insights?.deepAnalysis?.moneyWasters?.length) && (
+              <Card className="p-6 bg-gradient-to-r from-accent/5 to-primary/5">
+                <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Banknote className="h-5 w-5 text-foreground" />
+                  Suggested Budget Reallocation
+                </h3>
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-center">
+                  {insights?.deepAnalysis?.moneyWasters?.[0] && (
+                    <div className="text-center p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <p className="text-xs text-muted-foreground mb-1">Reduce from</p>
+                      <p className="font-medium text-sm text-destructive">{insights.deepAnalysis.moneyWasters[0].title.replace(/^Pause or rebuild: |^Reduce budget: /, '').substring(0, 25)}...</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{rec.description}</p>
-                  </div>
-                ))}
-                {!insights?.deepAnalysis?.creativeFatigue?.length && (
-                  <p className="text-muted-foreground text-sm py-2">
-                    No immediate creative fatigue issues were detected.
-                  </p>
-                )}
-              </div>
-            </Card>
+                  )}
+                  <ArrowRight className="h-6 w-6 text-muted-foreground rotate-90 md:rotate-0" />
+                  {insights?.deepAnalysis?.opportunities?.[0] && (
+                    <div className="text-center p-4 rounded-lg bg-accent/10 border border-accent/20">
+                      <p className="text-xs text-muted-foreground mb-1">Reallocate to</p>
+                      <p className="font-medium text-sm text-accent">{insights.deepAnalysis.opportunities[0].title.replace(/^Scale top performer: |^Replicate creative from /, '').substring(0, 25)}...</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
 
           </TabsContent>
 
