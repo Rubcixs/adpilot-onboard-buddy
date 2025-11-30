@@ -308,20 +308,53 @@ serve(async (req) => {
       }
     }
     
-    // CLICKS: prefer "link_clicks" over "clicks"
-    let clicksCol: string | null = null;
+    // CLICKS: fuzzy matching with exclusions and priority ranking
+    // A column is a click column if:
+    // - Contains "click"
+    // - Does NOT contain: "rate", "ctr", "costper", "cpc", "perclick", "cpm"
+    const clickCandidates: Array<{ col: string; total: number; priority: number }> = [];
+    
     for (const [norm, orig] of colMap.entries()) {
-      if (/linkclicks/.test(norm)) {
-        clicksCol = orig;
-        break;
+      const hasClick = /click/.test(norm);
+      const isExcluded = /rate|ctr|costper|cpc|perclick|cpm/.test(norm);
+      
+      if (hasClick && !isExcluded) {
+        // Calculate total for this column
+        let total = 0;
+        for (const row of csvData) {
+          total += toNumber(row[orig]);
+        }
+        
+        // Determine priority: linkclick (1) > clicks (2) > other (3)
+        let priority = 3;
+        if (/linkclick/.test(norm)) {
+          priority = 1;
+        } else if (/^clicks$/.test(norm)) {
+          priority = 2;
+        }
+        
+        clickCandidates.push({ col: orig, total, priority });
       }
     }
-    if (!clicksCol) {
-      for (const [norm, orig] of colMap.entries()) {
-        if (/clicks/.test(norm) && !/linkclicks/.test(norm)) {
-          clicksCol = orig;
-          break;
-        }
+    
+    // Sort by priority (lower is better), then by total (higher is better)
+    clickCandidates.sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return b.total - a.total;
+    });
+    
+    // Pick the best click column
+    let clicksCol: string | null = null;
+    if (clickCandidates.length > 0) {
+      // Find first candidate with non-zero total
+      const bestCandidate = clickCandidates.find(c => c.total > 0);
+      if (bestCandidate) {
+        clicksCol = bestCandidate.col;
+        console.log(`Selected click column: ${clicksCol} (total: ${bestCandidate.total}, priority: ${bestCandidate.priority})`);
+      } else {
+        // All candidates have 0 total, pick first by priority
+        clicksCol = clickCandidates[0].col;
+        console.log(`Selected click column: ${clicksCol} (no non-zero totals, picked by priority)`);
       }
     }
     
@@ -458,7 +491,8 @@ serve(async (req) => {
     }
     
     // Step 3: Recalculate metrics excluding the global total row
-    let totalSpend = 0, totalRev = 0, totalPurch = 0, totalLeads = 0, totalResults = 0, totalImps = 0, totalClicks = 0;
+    let totalSpend = 0, totalRev = 0, totalPurch = 0, totalLeads = 0, totalResults = 0, totalImps = 0;
+    let totalClicks: number | null = null; // IMPORTANT: null if no click column exists
     const rowMap = new Map();
 
     for (let i = 0; i < csvData.length; i++) {
@@ -471,7 +505,12 @@ serve(async (req) => {
       const leads = leadsCol ? toNumber(row[leadsCol]) : 0;
       const results = resultsCol ? toNumber(row[resultsCol]) : 0;
       const imps = impsCol ? toNumber(row[impsCol]) : 0;
-      const clicks = clicksCol ? toNumber(row[clicksCol]) : 0;
+      
+      // CRITICAL: Only aggregate clicks if click column exists
+      if (clicksCol) {
+        const clicks = toNumber(row[clicksCol]);
+        totalClicks = (totalClicks || 0) + clicks;
+      }
       
       totalSpend += spend;
       totalRev += rev;
@@ -479,7 +518,6 @@ serve(async (req) => {
       totalLeads += leads;
       totalResults += results;
       totalImps += imps;
-      totalClicks += clicks;
 
       if (nameCol) {
         const name = String(row[nameCol] || "Unknown").trim();
@@ -487,17 +525,28 @@ serve(async (req) => {
             const e = rowMap.get(name) || { spend: 0, results: 0, revenue: 0 };
             e.spend += spend; e.results += purch; e.revenue += rev;
             rowMap.set(name, e);
-        }
+    }
+    
+    console.log(`Totals: Spend=${totalSpend}, Impressions=${totalImps}, Clicks=${totalClicks ?? 'null'}, Purchases=${totalPurch}, Leads=${totalLeads}, Revenue=${totalRev}`);
       }
     }
     
     // --- C. Calculate All Metrics ---
-    const ctr = totalImps > 0 ? round((totalClicks / totalImps) * 100, 2) : null;
-    const cpc = totalClicks > 0 ? round(totalSpend / totalClicks, 2) : null;
+    // CRITICAL: CTR is null if either impressions or clicks are null/0
+    const ctr = (totalImps > 0 && totalClicks !== null && totalClicks > 0) 
+      ? round((totalClicks / totalImps) * 100, 2) 
+      : null;
+    
+    const cpc = (totalClicks !== null && totalClicks > 0) 
+      ? round(totalSpend / totalClicks, 2) 
+      : null;
+    
     const cpp = totalPurch > 0 ? round(totalSpend / totalPurch, 2) : null;
     const cpl = totalLeads > 0 ? round(totalSpend / totalLeads, 2) : null;
     const cpm = totalImps > 0 ? round((totalSpend / totalImps) * 1000, 2) : null;
     const roas = totalRev && totalSpend > 0 ? round(totalRev / totalSpend, 2) : null;
+    
+    console.log(`Metrics calculated: CTR=${ctr}, CPC=${cpc}, CPL=${cpl}, CPP=${cpp}, CPM=${cpm}, ROAS=${roas}`);
 
     // --- C. DETECT CAMPAIGN GOAL (STRICT DETERMINISTIC HIERARCHY) ---
     // 
@@ -531,7 +580,7 @@ serve(async (req) => {
       } else if (totalLeads > 0) {
         goal = "leads";
         console.log(`Goal inferred from data: leads (total: ${totalLeads})`);
-      } else if (totalClicks > 0) {
+      } else if (totalClicks !== null && totalClicks > 0) {
         goal = "clicks";
         console.log(`Goal inferred from data: clicks (total: ${totalClicks})`);
       } else if (totalImps > 0) {
@@ -622,7 +671,7 @@ serve(async (req) => {
         metrics = {
           totalSpend: totalSpend > 0 ? round(totalSpend, 2) : null,
           totalImpressions: totalImps > 0 ? totalImps : null,
-          totalClicks: totalClicks > 0 ? totalClicks : null,
+          totalClicks: (totalClicks !== null && totalClicks > 0) ? totalClicks : null,
           totalPurchases: totalPurch > 0 ? totalPurch : null,
           totalLeads: totalLeads > 0 ? totalLeads : null,
           totalRevenue: totalRev > 0 ? round(totalRev, 2) : null,
@@ -646,7 +695,7 @@ serve(async (req) => {
       metrics = {
         totalSpend: totalSpend > 0 ? round(totalSpend, 2) : null,
         totalImpressions: totalImps > 0 ? totalImps : null,
-        totalClicks: totalClicks > 0 ? totalClicks : null,
+        totalClicks: (totalClicks !== null && totalClicks > 0) ? totalClicks : null,
         totalPurchases: totalPurch > 0 ? totalPurch : null,
         totalLeads: totalLeads > 0 ? totalLeads : null,
         totalRevenue: totalRev > 0 ? round(totalRev, 2) : null,
