@@ -73,21 +73,22 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log('Received request body:', JSON.stringify(body));
+    console.log('📥 Received request body:', JSON.stringify(body));
     
     // Handle both direct and nested data structures
     const requestData = body.type === 'no-data' ? body.data : body;
     
-    // Extract and map fields
+    // Extract and map fields from wizard data
     const goal = requestData.goal;
     const budget = requestData.budget;
     const aov = requestData.productPrice || requestData.aov; // Map productPrice to aov
     const industry = requestData.businessType || requestData.industry; // Map businessType to industry
     const description = requestData.businessName || requestData.description || '';
 
-    console.log('Extracted data:', { goal, budget, aov, industry, description });
+    console.log('✅ Extracted data:', { goal, budget, aov, industry, description });
 
     if (!budget || !goal || !aov || !industry) {
+      console.error('❌ Validation failed:', { budget, goal, aov, industry });
       throw new Error(`Missing required inputs. Received: budget=${budget}, goal=${goal}, aov=${aov}, industry=${industry}`);
     }
 
