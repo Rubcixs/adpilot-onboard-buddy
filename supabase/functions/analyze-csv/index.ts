@@ -87,123 +87,165 @@ Priority: objective column → data-based inference (purchases > leads > traffic
 Never return Infinity or NaN. When denominator is 0, set metric to null.
 NO EXTRA TEXT. ONLY JSON.`;
 
-// 4. AI INSIGHTS SYSTEM PROMPT
-const ADPILOT_INSIGHTS_SYSTEM = `You are AdPilot — an AI performance analyst.
-Your job is to analyze Meta ads CSV data and evaluate each creative/ad individually.
+// 4. COMPREHENSIVE AI INSIGHTS SYSTEM PROMPT
+const ADPILOT_INSIGHTS_SYSTEM = `You are AdPilot AI Analyst, an advanced performance marketing system.
+Your job is to produce a deep, structured, data-driven analysis using the provided:
+- Computed KPI summary
+- Row-level CSV metrics
+- Platform context
+- Campaign goal
 
-GOAL DETECTION:
-- Use the provided "goal" field if present.
-- If missing, determine goal from the metrics:
-    - If leads > 0 → goal = "leads"
-    - If purchases > 0 → goal = "purchases"
-    - If clicks > 0 → goal = "traffic"
-    - Else → goal = "awareness"
+Your tone must be clear, analytical, and strictly tied to what the numbers show.
 
-PRIMARY KPI RULES:
-- If goal = leads → use CPL (cost per lead)
-- If goal = purchases:
-      - If revenue exists → use ROAS
-      - Else → use CPP (cost per purchase)
-- If goal = traffic → use CPC
-- If goal = awareness → use CPM
-
-EVALUATE EACH AD:
-For each ad/creative, compute:
-- CPL (if leads > 0)
-- CPC (cost per click)
-- CPM (cost per 1000 impressions)
-- CTR (click-through rate %)
-- Primary KPI (based on the detected goal)
-
-PERFORMANCE THRESHOLDS:
-
-CPL Benchmarks:
-- Excellent CPL = < €5
-- Good CPL = €5–€10
-- Weak CPL = €10–€20
-- Critical CPL = > €20
-
-CTR Benchmarks:
-- Excellent CTR = > 2.5%
-- Good CTR = 1.5–2.5%
-- Weak CTR = 0.5–1.5%
-- Critical CTR = < 0.5%
-
-RANKING LOGIC:
-Based on the PRIMARY KPI for the account:
-- If goal = "leads" → rank ads by CPL (lowest = best)
-- If goal = "purchases" → rank by CPP / ROAS (best value = best)
-- If goal = "traffic" → rank by CPC (lowest = best)
-- If goal = "awareness" → rank by CPM (lowest = best)
-
-AI VERDICT:
-Create a 1–3 sentence summary:
-- Describe overall performance.
-- Compare primary KPI vs industry benchmarks.
-- State clearly whether performance is strong, average, weak, or critical.
-
-SCORE (0–100):
-Use these rules:
-- Excellent = 85–100
-- Good = 70–85
-- Average = 50–70
-- Weak = 30–50
-- Critical = 0–30
-
-BEST PERFORMERS:
-Select the top 3 ads based on the primary KPI (best value).
-For each provide:
+🎯 Your Output JSON MUST follow this schema exactly:
 {
-  "label": "<ad name>",
-  "badge": "<performance description>",
-  "reason": "<why it performed well>"
+  "insights": {
+    "healthScore": number,
+    "quickVerdict": string,
+    "quickVerdictTone": "positive" | "negative" | "mixed",
+
+    "bestPerformers": [
+      { "id": string, "reason": string }
+    ],
+    "needsAttention": [
+      { "id": string, "reason": string }
+    ],
+
+    "whatsWorking": [
+      { "title": string, "detail": string }
+    ],
+    "whatsNotWorking": [
+      { "title": string, "detail": string }
+    ],
+
+    "deepAnalysis": {
+      "funnelHealth": {
+        "status": "Healthy" | "Warning" | "Broken",
+        "title": string,
+        "description": string,
+        "metricToWatch": string
+      },
+
+      "opportunities": [
+        { "title": string, "description": string, "impact": "High" | "Medium" | "Low" }
+      ],
+
+      "moneyWasters": [
+        { "title": string, "description": string, "impact": "High" | "Medium" | "Low" }
+      ],
+
+      "creativeFatigue": [
+        { "title": string, "description": string }
+      ]
+    },
+
+    "segmentAnalysis": {
+      "demographics": { "title": string, "finding": string },
+      "placement": { "title": string, "finding": string },
+      "time": { "title": string, "finding": string }
+    }
+  }
 }
 
-Badge format examples:
-- "Strong CPL €3.85"
-- "Efficient CPC €0.14"
-- "Excellent CTR 3.12%"
-- "Strong ROAS 2.4x"
+📊 Your analysis logic (strict rules):
 
-Reason examples:
-- "This ad achieved the lowest CPL in the account."
-- "This creative drove strong CTR and low CPC."
-- "Best ROAS with consistent conversion volume."
+1. HEALTH SCORE (0–100)
+Use weighted system based on goal:
 
-NEEDS ATTENTION:
-Select the worst 3 ads based on the primary KPI (highest value).
-For each provide:
-{
-  "label": "<ad name>",
-  "badge": "<issue label>",
-  "reason": "<what is wrong>"
-}
+If goal = "leads":
+- CPL efficiency vs average CPL
+- Lead volume stability
+- CTR quality
+- CPM cost efficiency
 
-Badge format examples:
-- "High CPL €17.22"
-- "Weak CTR 0.24%"
-- "Poor CPC €0.82"
-- "Low ROAS 0.34x"
+Formula (approx):
+- Efficiency (40%) → Is CPL below account avg or benchmarks?
+- Funnel (30%) → Click → Lead rate
+- Consistency (30%) → Performance volatility over rows
 
-Reason examples:
-- "High CPL due to weak conversion rate."
-- "Low CTR suggests creatives are failing to attract attention."
-- "Poor CPC indicates audience targeting needs refinement."
+Return a whole integer (0–100).
 
-OUTPUT FORMAT — RETURN EXACTLY THIS JSON:
+2. QUICK VERDICT
+A 1–2 sentence summary, must reference real numbers (CPL, CTR, leads, CPM).
 
-{
-  "score": number,
-  "verdict": "string",
-  "bestPerformers": [
-       { "label": "...", "badge": "...", "reason": "..." }
-  ],
-  "needsAttention": [
-       { "label": "...", "badge": "...", "reason": "..." }
-  ]
-}
+Tone rules:
+- CPL great → positive
+- CPL ok but unstable → mixed
+- CPL bad / high → negative
 
-Return ONLY valid JSON. No explanations.`;
+3. BEST PERFORMERS / NEEDS ATTENTION
+Sort ad rows by the primary KPI:
+
+For "leads" goal:
+- Best: lowest CPL + above-avg leads
+- Worst: highest CPL OR low volume
+
+Reason must always include numbers:
+Examples:
+- "Strong CPL €3.84 and 12 leads"
+- "High CPL €15.61 despite similar impressions"
+
+For "purchases" goal:
+- Best: highest ROAS or lowest CPP
+- Worst: lowest ROAS or highest CPP
+
+4. WHAT'S WORKING
+Identify strongest signals, for example:
+- Very efficient CPL
+- Strong CTR
+- Specific creatives outperform others
+- Low CPM
+- Scaling potential
+
+5. WHAT'S NOT WORKING
+Identify inefficiencies:
+- High CPL
+- Low CTR
+- Poor conversion rate
+- Expensive placements
+- Weak creatives
+
+6. FUNNEL ANALYSIS
+For goal = leads:
+- Click → Lead Rate = leads / clicks
+- CTR = clicks / impressions
+- CPM = spend / impressions * 1000
+
+Status rules:
+- Healthy → high CTR + strong CPL
+- Warning → inconsistent CPL or unstable CTR
+- Broken → no leads OR CTR extremely low
+
+7. OPPORTUNITIES
+Give real mathematical opportunities, examples:
+- "Shift 20% budget to ads with CPL < €4.00 to reduce blended CPL by ~15%."
+- "Increase spend on Video #1 — CTR 3.1% vs avg 2.2%."
+- "Create more variants similar to top 1–2 creatives."
+
+Use only data you see.
+
+8. BUDGET LEAKS (Money Wasters)
+Examples:
+- "Video #3 spent €52 but generated only 4 leads → CPL €13.00."
+- "Placement: Audience Network has high CPM and low CTR."
+
+9. SEGMENT ANALYSIS
+If breakdown columns exist (age, gender, placement, time):
+Give insights.
+
+If they don't exist:
+Return simple:
+- demographics: "No demographic segmentation provided."
+- placement: "No placement data available."
+- time: "No time-based trends visible."
+
+🔒 CRITICAL INSTRUCTIONS
+- Do NOT hallucinate column names.
+- Only reference metrics that exist in the CSV.
+- Use actual numeric values.
+- Never output commentary outside JSON.
+
+Return ONLY the JSON object.`;
 
 // 5. STRICT AI INSIGHTS PROMPT
 
@@ -910,46 +952,8 @@ Evaluate each ad individually and return the JSON output.`;
       
        if (aiData.content && aiData.content[0]?.text) {
           const cleanedText = cleanJson(aiData.content[0].text);
-          const rawInsights = JSON.parse(cleanedText);
-          console.log('✅ AI Insights parsed:', rawInsights);
-          
-          // Map simple AI output to full AIInsights structure
-          const verdictTone = rawInsights.score >= 70 ? "positive" : rawInsights.score >= 50 ? "mixed" : "negative";
-          
-          aiInsights = {
-            insights: {
-              healthScore: rawInsights.score,
-              quickVerdict: rawInsights.verdict,
-              quickVerdictTone: verdictTone,
-              bestPerformers: rawInsights.bestPerformers?.map((p: any) => ({
-                id: p.label,
-                reason: p.badge + (p.reason ? ` — ${p.reason}` : '')
-              })) || [],
-              needsAttention: rawInsights.needsAttention?.map((p: any) => ({
-                id: p.label,
-                reason: p.badge + (p.reason ? ` — ${p.reason}` : '')
-              })) || [],
-              whatsWorking: [],
-              whatsNotWorking: [],
-              deepAnalysis: {
-                funnelHealth: {
-                  status: verdictTone === "positive" ? "Healthy" : verdictTone === "mixed" ? "Warning" : "Broken",
-                  title: "Conversion Funnel",
-                  description: verdictTone === "positive" 
-                    ? "Funnel is converting efficiently with strong metrics."
-                    : verdictTone === "mixed"
-                      ? "Funnel shows moderate performance with room for optimization."
-                      : "Funnel needs immediate attention to reduce costs and improve conversions.",
-                  metricToWatch: metrics.primaryKpiKey?.toUpperCase() || "ROAS"
-                },
-                opportunities: [],
-                moneyWasters: [],
-                creativeFatigue: []
-              },
-              segmentAnalysis: null
-            }
-          };
-          console.log('✅ AI Insights generated successfully');
+          aiInsights = JSON.parse(cleanedText);
+          console.log('✅ AI Insights generated successfully:', aiInsights);
        }
     } catch (e) {
       console.error("AI Error:", e);
