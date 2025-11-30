@@ -1,275 +1,170 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronLeft, Download, Target, Users, Lightbulb, CheckCircle2, DollarSign, TrendingUp, Loader2 } from "lucide-react";
+import { ChevronLeft, TrendingUp, Target, Zap, ArrowRight, CheckCircle2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useMemo, useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-interface UserInput {
-  businessName?: string;
-  businessType?: string;
-  country?: string;
-  goal?: string;
-  priority?: string;
-  customer?: string;
-  customCustomer?: string;
-  offer?: string;
-  customOffer?: string;
-  productPrice?: number;
-  monthlyBudget?: number | string;
-  expectedResults?: number | string;
-  experience?: string;
+// Data structure for Zero-Data forecast results
+interface ZeroDataForecastResult {
+  quickVerdict: string;
+  benchmarks: {
+    cpm: number;
+    cpc: number;
+    ctr: number;
+    cpa: number;
+    roas: number;
+  };
+  forecast: {
+    totalBudget: number;
+    impressionsRange: string;
+    clicksRange: string;
+    conversionsRange: string;
+  };
+  structure: Array<{
+    name: string;
+    goal: string;
+    budgetAllocation: string;
+    reason: string;
+  }>;
+  roadmap: Array<{
+    week: string;
+    title: string;
+    description: string;
+  }>;
 }
 
-interface LocationState {
-  plan?: any; // Raw API response from Claude
-  userInput?: UserInput;
-}
+// Formatting helpers
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+const formatNumber = (value: number): string => {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return value.toLocaleString();
+};
 
 const Results = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as LocationState | null;
-  const [checkedItems, setCheckedItems] = useState<string[]>([]);
   
-  // Try multiple possible locations for userInput
-  const plan = state?.plan;
-  const userInput = state?.userInput || (state as any)?.completeData || {};
-  
-  // Robust data access with fail-safes
-  const budget = typeof userInput?.monthlyBudget === 'number' ? userInput.monthlyBudget : 0;
-  const hasBudget = budget > 0;
-  
-  console.log("Location state:", state);
-  console.log("User Input:", userInput);
-  console.log("Budget:", budget, "Has Budget:", hasBudget);
-
-  // Parse the raw AI response to extract the actual data
-  const aiData = useMemo(() => {
-    if (!plan) return null;
-    
-    try {
-      // Handle raw Claude API response format
-      const aiResponseString = plan?.content?.[0]?.text || (typeof plan === 'string' ? plan : JSON.stringify(plan));
-      
-      // Clean up markdown code blocks if present
-      const cleanJson = aiResponseString
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "")
-        .trim();
-      
-      const parsed = JSON.parse(cleanJson);
-      console.log("Parsed AI Data:", parsed);
-      return parsed;
-    } catch (error) {
-      console.error("Failed to parse AI response:", error);
-      console.log("Raw plan object:", plan);
-      return null;
-    }
-  }, [plan]);
-
-  // Handle missing data
-  if (!plan || !userInput) {
-    return (
-      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
-        <Card className="p-8 text-center max-w-md">
-          <Loader2 className="h-12 w-12 text-primary mx-auto mb-4 animate-spin" />
-          <h2 className="text-xl font-display font-semibold text-foreground mb-2">
-            No Plan Data Found
-          </h2>
-          <p className="text-muted-foreground mb-6">
-            It looks like you haven't completed the wizard yet. Please start from the beginning to generate your media plan.
-          </p>
-          <Button onClick={() => navigate("/wizard/step1")}>
-            Start Wizard
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
-  // Get currency symbol based on country
-  const getCurrencySymbol = (country: string | undefined) => {
-    const euroCountries = ["Germany", "France", "Spain", "Italy", "Netherlands", "Belgium", "Austria", "Portugal", "Ireland", "Finland", "Greece", "DE", "FR", "ES", "IT", "NL", "BE", "AT", "PT", "IE", "FI", "GR"];
-    const gbpCountries = ["United Kingdom", "UK", "GB"];
-    
-    if (euroCountries.some(c => country?.toLowerCase().includes(c.toLowerCase()))) return "€";
-    if (gbpCountries.some(c => country?.toLowerCase().includes(c.toLowerCase()))) return "£";
-    return "$";
+  // TODO: Replace with actual data from location.state after backend integration
+  const mockData: ZeroDataForecastResult = {
+    quickVerdict: "High-growth potential with strong market positioning. Scale confidently with disciplined testing.",
+    benchmarks: {
+      cpm: 8.5,
+      cpc: 0.65,
+      ctr: 1.8,
+      cpa: 28.0,
+      roas: 3.2,
+    },
+    forecast: {
+      totalBudget: 3000,
+      impressionsRange: "350K - 450K",
+      clicksRange: "4.5K - 6K",
+      conversionsRange: "95 - 130",
+    },
+    structure: [
+      {
+        name: "Awareness Builder",
+        goal: "Reach",
+        budgetAllocation: "30%",
+        reason: "Build brand recognition and capture cold traffic with visual storytelling",
+      },
+      {
+        name: "Traffic Driver",
+        goal: "Link Clicks",
+        budgetAllocation: "25%",
+        reason: "Drive qualified visitors to landing pages with compelling value props",
+      },
+      {
+        name: "Conversion Machine",
+        goal: "Purchases",
+        budgetAllocation: "45%",
+        reason: "Target warm audiences and retargeting for maximum conversion efficiency",
+      },
+    ],
+    roadmap: [
+      {
+        week: "Week 1",
+        title: "Foundation & Launch",
+        description: "Set up Business Manager, install Facebook Pixel, create initial ad sets with 3-5 ad variations per campaign. Launch with conservative budgets to gather data.",
+      },
+      {
+        week: "Week 2",
+        title: "Data Collection & Optimization",
+        description: "Monitor key metrics daily. Identify winning creatives and audiences. Pause underperformers (CPA >35€). Scale winners by 20-30% budget increase.",
+      },
+      {
+        week: "Week 3",
+        title: "Expansion & Testing",
+        description: "Launch lookalike audiences from converters. Test new creative angles based on Week 1-2 learnings. Introduce dynamic product ads for retargeting.",
+      },
+      {
+        week: "Week 4",
+        title: "Scale & Refine",
+        description: "Allocate 60% budget to proven winners. Launch broader targeting with best-performing creatives. Prepare detailed performance report for next month's strategy.",
+      },
+    ],
   };
 
-  const currencySymbol = getCurrencySymbol(userInput?.country);
+  const data = mockData; // In production: location.state?.forecastData || mockData
 
-  const formatBudget = (budget: number | string | undefined) => {
-    if (budget === undefined || budget === "not-sure") return null; // Return null to hide from header
-    if (typeof budget === "number") return `${currencySymbol}${budget.toLocaleString()}/month`;
-    return budget;
-  };
-
-  const formatCurrency = (value: string | number | undefined) => {
-    if (!value) return null;
-    const numStr = String(value).replace(/[^0-9.-]/g, "");
-    const num = parseFloat(numStr);
-    if (isNaN(num)) return value;
-    return `${currencySymbol}${num.toLocaleString()}`;
-  };
-
-  // Extract data with fallbacks for different key casings
-  const forecasts = aiData?.Forecasts || aiData?.forecasts || {};
-  const campaignStructure = aiData?.Campaign_Structure || aiData?.campaign_structure || aiData?.campaigns || [];
-  const targeting = aiData?.Targeting_Rules || aiData?.Targeting || aiData?.targeting || aiData?.audiences || [];
-  const budgetAllocation = aiData?.Budget_Allocation || aiData?.budget_allocation || aiData?.budgetAllocation || [];
-  const creativeAngles = aiData?.Creative_Plan || aiData?.creative_plan || aiData?.Creative_Angles || aiData?.creative_angles || aiData?.creativeAngles || [];
-  const checklist = aiData?.Checklist || aiData?.checklist || aiData?.setup_checklist || [];
-  const summary = aiData?.Summary || aiData?.summary || aiData?.overview || "";
-
-  // Default budget allocation if not provided
-  const defaultBudgetAllocation = [
-    { platform: "Prospecting Campaigns", budget: "70%", percentage: 70, reason: "Find new customers" },
-    { platform: "Retargeting Campaigns", budget: "30%", percentage: 30, reason: "Convert warm audiences" },
-  ];
-
-  const displayBudgetAllocation = budgetAllocation.length > 0 ? budgetAllocation : defaultBudgetAllocation;
-
-  // Normalize campaign structure to array format
-  const normalizedCampaigns = Array.isArray(campaignStructure) 
-    ? campaignStructure 
-    : typeof campaignStructure === 'string' 
-      ? [{ name: "Campaign Strategy", description: campaignStructure }]
-      : Object.entries(campaignStructure).map(([name, value]) => ({
-          name,
-          description: typeof value === 'string' ? value : JSON.stringify(value),
-        }));
-
-  // Normalize targeting to array format
-  const normalizedAudiences = Array.isArray(targeting)
-    ? targeting.map((item: any) => 
-        typeof item === 'string' 
-          ? { label: "Audience", value: item }
-          : { label: item.label || item.name || "Audience", value: item.value || item.description || JSON.stringify(item) }
-      )
-    : typeof targeting === 'object'
-      ? Object.entries(targeting).map(([label, value]) => ({
-          label,
-          value: typeof value === 'string' ? value : JSON.stringify(value),
-        }))
-      : [];
-
-  // Normalize creative angles
-  const normalizedCreatives = Array.isArray(creativeAngles)
-    ? creativeAngles.map((item: any) =>
-        typeof item === 'string'
-          ? { angle: item, description: "" }
-          : { 
-              angle: item.angle || item.name || item.title || item.concept || "Creative", 
-              description: item.description || item.detail || item.explanation || item.hook || item.message || "" 
-            }
-      )
-    : [];
-
-  // Normalize checklist
-  const normalizedChecklist = Array.isArray(checklist)
-    ? checklist.map((item: any) => typeof item === 'string' ? item : item.task || item.item || JSON.stringify(item))
-    : [];
-
-  // Download Launch Brief as detailed text file
-  const handleDownloadStrategy = () => {
-    const roadmap = aiData?.Execution_Roadmap || aiData?.execution_roadmap || aiData?.roadmap || aiData?.Roadmap || [];
-    const executionSteps = Array.isArray(roadmap) 
-      ? roadmap.map((step: any) => `[ ] ${typeof step === 'string' ? step : step.step || step.title || step.action || JSON.stringify(step)}`).join('\n    ')
-      : 'See dashboard for steps';
-
-    const creativeStrategy = normalizedCreatives.length > 0
-      ? normalizedCreatives.map((c: any) => `\n    * Angle: ${c.angle}\n      Why: ${c.description}`).join('')
-      : '\n    * Angle: Problem/Solution\n      Why: Address customer pain points directly\n    * Angle: Social Proof\n      Why: Showcase testimonials and results';
-
-    const budgetBreakdown = displayBudgetAllocation.map((item: any) => {
-      const percentage = item.percentage || 50;
-      const amount = hasBudget ? Math.round((percentage / 100) * budget) : null;
-      const platformName = item.platform || item.name || item.channel || 'Campaign';
-      return `    - ${platformName}: ${percentage}% (approx. ${amount ? `${currencySymbol}${amount}` : 'TBD'})`;
-    }).join('\n');
-
-    const targetingInfo = aiData?.Targeting || aiData?.targeting || {};
-    const primaryTarget = typeof targetingInfo === 'object' && !Array.isArray(targetingInfo) 
-      ? targetingInfo.primary || targetingInfo.focus || 'Broad targeting recommended'
-      : normalizedAudiences[0]?.value || 'Broad targeting';
-    const exclusions = typeof targetingInfo === 'object' && !Array.isArray(targetingInfo)
-      ? targetingInfo.exclusions || targetingInfo.exclude || 'Past purchasers (30 days)'
-      : 'Past purchasers (30 days)';
-
-    const checklistItems = (normalizedChecklist.length > 0 ? normalizedChecklist : [
-      "Create your ad account (Meta Business Manager)",
-      "Install tracking pixel on your website",
-      "Set up conversion tracking",
-      "Prepare 3-5 ad creative variations",
-      "Write compelling ad copy",
-      "Set up your target audiences",
-      "Launch with a small test budget first",
-    ]).map((item: string) => `    [ ] ${item}`).join('\n');
-
+  const handleDownload = () => {
     const content = `
-🚀 ADPILOT LAUNCH BRIEF
-========================
-Generated for: ${userInput?.businessName || userInput?.businessType || 'My Business'}
-Target Market: ${userInput?.country || 'Global'}
-Main Goal: ${userInput?.goal || 'Increase conversions'}
-Total Monthly Budget: ${hasBudget ? `${currencySymbol}${budget.toLocaleString()}` : 'Not Set'}
+AdPilot Media Plan - Zero-Data Forecast
+========================================
 
-═══════════════════════════════════════════════════════════
+QUICK VERDICT
+${data.quickVerdict}
 
-💰 BUDGET STRATEGY
-------------------
-Your budget should be split to balance growth and returns:
+FORECAST (Monthly)
+- Budget: ${formatCurrency(data.forecast.totalBudget)}
+- Impressions: ${data.forecast.impressionsRange}
+- Clicks: ${data.forecast.clicksRange}
+- Conversions: ${data.forecast.conversionsRange}
 
-${budgetBreakdown}
+BENCHMARKS
+- CPM: ${formatCurrency(data.benchmarks.cpm)}
+- CPC: ${formatCurrency(data.benchmarks.cpc)}
+- CTR: ${data.benchmarks.ctr}%
+- CPA: ${formatCurrency(data.benchmarks.cpa)}
+- ROAS: ${data.benchmarks.roas}x
 
-═══════════════════════════════════════════════════════════
+CAMPAIGN STRUCTURE
+${data.structure.map(c => `
+${c.name} (${c.budgetAllocation})
+Goal: ${c.goal}
+Reason: ${c.reason}
+`).join('\n')}
 
-🎯 AUDIENCE TARGETING
----------------------
-Primary Focus: ${primaryTarget}
-Who to exclude: ${exclusions}
+4-WEEK ROADMAP
+${data.roadmap.map(w => `
+${w.week}: ${w.title}
+${w.description}
+`).join('\n')}
 
-═══════════════════════════════════════════════════════════
+Generated by AdPilot AI
+    `.trim();
 
-🎨 CREATIVE ANGLES (The "Secret Sauce")
----------------------------------------
-Don't just run generic ads. Test these specific concepts:
-${creativeStrategy}
-
-═══════════════════════════════════════════════════════════
-
-📅 EXECUTION PLAN
------------------
-    ${executionSteps}
-
-═══════════════════════════════════════════════════════════
-
-✅ SETUP CHECKLIST
-------------------
-${checklistItems}
-
-═══════════════════════════════════════════════════════════
-
-📊 NEXT STEPS
--------------
-1. Complete the setup checklist above
-2. Launch with a small test budget (${hasBudget ? `${currencySymbol}${Math.round(budget * 0.2)}` : '20% of budget'}) first
-3. Monitor performance for 3-5 days
-4. Optimize based on initial results
-5. Scale what's working
-
-═══════════════════════════════════════════════════════════
-(c) ${new Date().getFullYear()} AdPilot AI | Generated ${new Date().toLocaleDateString()}
-`.trim();
-
-    const blob = new Blob([content], { type: 'text/plain' });
+    const blob = new Blob([content], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'AdPilot_Launch_Brief.txt';
+    a.download = "AdPilot_Media_Plan.txt";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -282,7 +177,11 @@ ${checklistItems}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => navigate("/")} className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/")}
+              className="gap-2"
+            >
               <ChevronLeft className="h-4 w-4" />
               Back to Home
             </Button>
@@ -292,299 +191,238 @@ ${checklistItems}
                 AdPilot
               </span>
             </div>
-            <Button variant="outline" className="gap-2" onClick={() => window.print()}>
+            <Button variant="outline" onClick={handleDownload} className="gap-2">
               <Download className="h-4 w-4" />
-              Download PDF
+              Download Plan
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-12 max-w-5xl">
-        {/* Success Header */}
-        <div className="text-center mb-12 animate-fade-in">
-          <div className="h-16 w-16 rounded-2xl bg-accent/20 mx-auto mb-4 flex items-center justify-center">
-            <CheckCircle2 className="h-8 w-8 text-accent" />
+      <main className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Page Title */}
+        <div className="mb-8 animate-fade-in">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center">
+              <Target className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-display font-bold text-foreground">
+                Your Media Plan
+              </h1>
+              <p className="text-muted-foreground">
+                AI-generated forecast based on your goals and budget
+              </p>
+            </div>
           </div>
-          <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-3">
-            Your Media Plan is Ready!
-          </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            {summary || "Here's a customized advertising plan based on your business, goals, and budget. This is your starting point - you can always adjust as you learn what works."}
-          </p>
         </div>
 
-        {/* Business Summary */}
-        <Card className="p-6 mb-6">
-          <h2 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            Business Summary
-          </h2>
-          <div className="grid md:grid-cols-3 gap-4">
+        {/* Quick Verdict */}
+        <Card className="p-6 mb-6 border-l-4 border-l-primary bg-primary/5">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="h-5 w-5 text-primary" />
+            </div>
             <div>
-              <p className="text-sm text-muted-foreground mb-1">Business Type</p>
-              <p className="font-medium text-foreground">
-                {userInput.businessType || "Not specified"}
-                {userInput.businessName && ` (${userInput.businessName})`}
+              <h3 className="font-display font-semibold text-foreground mb-2 flex items-center gap-2">
+                Strategic Verdict
+                <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                  Recommended
+                </Badge>
+              </h3>
+              <p className="text-foreground/80 leading-relaxed text-lg">
+                {data.quickVerdict}
               </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Main Goal</p>
-              <p className="font-medium text-foreground">{userInput.goal || "Not specified"}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Target Market</p>
-              <p className="font-medium text-foreground">{userInput.country || "Not specified"}</p>
             </div>
           </div>
         </Card>
 
-        {/* Estimated Results */}
-        <Card className="p-6 mb-6 bg-gradient-accent border-accent">
-          <h2 className="font-display font-semibold text-accent-foreground mb-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Estimated Monthly Results
+        {/* SECTION 1: OVERVIEW - Forecast & Benchmarks */}
+        <div className="space-y-6 mb-8">
+          <h2 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
+            <Zap className="h-6 w-6 text-accent" />
+            Overview
           </h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <p className="text-3xl font-display font-bold text-accent-foreground mb-1">
-                {forecasts.conversions || forecasts.sales || forecasts.Conversions || forecasts.Sales || "25-50"}
-              </p>
-              <p className="text-sm text-accent-foreground/80">
-                {userInput.goal === "More leads" ? "Leads per month" : "Sales per month"}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-display font-bold text-accent-foreground mb-1">
-                {forecasts.cpa || forecasts.CPA || forecasts.cost_per_result || `${currencySymbol}20-40`}
-              </p>
-              <p className="text-sm text-accent-foreground/80">
-                {userInput.goal === "More leads" ? "Cost per lead" : "Cost per sale (CPA)"}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-display font-bold text-accent-foreground mb-1">
-                {forecasts.roas || forecasts.ROAS || forecasts.return_on_ad_spend || "2-4x"}
-              </p>
-              <p className="text-sm text-accent-foreground/80">Return on ad spend</p>
-            </div>
-          </div>
-          <p className="text-xs text-accent-foreground/70 text-center mt-4">
-            * Estimates based on industry benchmarks for {userInput.businessType || "your industry"}
-          </p>
-        </Card>
 
-        {/* Budget Allocation */}
-        <Card className="p-6 mb-6">
-          <h2 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            Recommended Budget Allocation{formatBudget(userInput.monthlyBudget) ? ` (${formatBudget(userInput.monthlyBudget)})` : ""}
-          </h2>
-          <div className="space-y-3">
-            {displayBudgetAllocation.map((item: any, i: number) => {
-              const percentage = item.percentage || 50;
-              const allocatedAmount = hasBudget ? Math.round((percentage / 100) * budget) : null;
-              return (
-                <div key={i} className="p-4 rounded-lg bg-muted/50 border border-border">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="font-medium text-foreground">{item.platform || item.name || item.channel}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{item.reason || item.description || ""}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-lg text-foreground">
-                        {hasBudget ? formatCurrency(allocatedAmount) : `${percentage}%`}
-                      </span>
-                      <p className="text-xs text-muted-foreground">({percentage}% of budget)</p>
-                    </div>
-                  </div>
-                  <div className="h-2 bg-border rounded-full overflow-hidden">
-                    <div className="h-full bg-primary" style={{ width: `${percentage}%` }} />
-                  </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Forecast Card */}
+            <Card className="p-6">
+              <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Target className="h-5 w-5 text-primary" />
+                Monthly Forecast
+              </h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-3 border-b border-border">
+                  <span className="text-sm text-muted-foreground">Total Budget</span>
+                  <span className="text-xl font-bold text-foreground">
+                    {formatCurrency(data.forecast.totalBudget)}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        </Card>
+                <div className="flex justify-between items-center py-3 border-b border-border">
+                  <span className="text-sm text-muted-foreground">Impressions</span>
+                  <span className="text-lg font-semibold text-foreground">
+                    {data.forecast.impressionsRange}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b border-border">
+                  <span className="text-sm text-muted-foreground">Clicks</span>
+                  <span className="text-lg font-semibold text-foreground">
+                    {data.forecast.clicksRange}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-sm text-muted-foreground">Conversions</span>
+                  <span className="text-lg font-semibold text-accent">
+                    {data.forecast.conversionsRange}
+                  </span>
+                </div>
+              </div>
+            </Card>
 
-        {/* Campaign Structure */}
-        <Card className="p-6 mb-6">
-          <h2 className="font-display font-semibold text-foreground mb-4">
+            {/* Benchmarks Card */}
+            <Card className="p-6">
+              <h3 className="font-display font-semibold text-foreground mb-4">
+                Benchmarked KPIs
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground mb-1">CPM</p>
+                  <p className="text-xl font-bold text-foreground">
+                    {formatCurrency(data.benchmarks.cpm)}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground mb-1">CPC</p>
+                  <p className="text-xl font-bold text-foreground">
+                    {formatCurrency(data.benchmarks.cpc)}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground mb-1">CTR</p>
+                  <p className="text-xl font-bold text-foreground">
+                    {data.benchmarks.ctr}%
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground mb-1">CPA</p>
+                  <p className="text-xl font-bold text-foreground">
+                    {formatCurrency(data.benchmarks.cpa)}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-accent/10 col-span-2">
+                  <p className="text-xs text-muted-foreground mb-1">Target ROAS</p>
+                  <p className="text-2xl font-bold text-accent">
+                    {data.benchmarks.roas}x
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* SECTION 2: CAMPAIGN STRUCTURE */}
+        <div className="space-y-6 mb-8">
+          <h2 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
+            <Target className="h-6 w-6 text-primary" />
             Campaign Structure
           </h2>
+
+          <Card className="p-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-semibold">Campaign Name</TableHead>
+                  <TableHead className="font-semibold">Goal</TableHead>
+                  <TableHead className="font-semibold">Budget</TableHead>
+                  <TableHead className="font-semibold">Strategy</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.structure.map((campaign, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">{campaign.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{campaign.goal}</Badge>
+                    </TableCell>
+                    <TableCell className="font-semibold text-accent">
+                      {campaign.budgetAllocation}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-md">
+                      {campaign.reason}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </div>
+
+        {/* SECTION 3: 4-WEEK ROADMAP */}
+        <div className="space-y-6 mb-8">
+          <h2 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
+            <ArrowRight className="h-6 w-6 text-accent" />
+            4-Week Execution Roadmap
+          </h2>
+
           <div className="space-y-4">
-            {normalizedCampaigns.length > 0 ? (
-              normalizedCampaigns.map((campaign: any, i: number) => (
-                <div key={i} className="p-4 rounded-lg border border-border">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium text-foreground">{campaign.name || campaign.title || `Campaign ${i + 1}`}</p>
-                    {campaign.budget && <Badge>{campaign.budget}</Badge>}
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    {campaign.description || campaign.objective || campaign.goal || ""}
-                  </p>
-                  {campaign.adSets && campaign.adSets.length > 0 && (
-                    <div className="pl-4 space-y-2 border-l-2 border-primary/30">
-                      {campaign.adSets.map((adSet: any, j: number) => (
-                        <div key={j} className="text-sm">
-                          <p className="font-medium text-foreground">{adSet.name}</p>
-                          <p className="text-xs text-muted-foreground">{adSet.description}</p>
-                        </div>
-                      ))}
+            {data.roadmap.map((week, index) => (
+              <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <span className="text-lg font-bold text-primary">
+                        {index + 1}
+                      </span>
                     </div>
-                  )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
+                        {week.week}
+                      </Badge>
+                      <h3 className="font-display font-semibold text-foreground text-lg">
+                        {week.title}
+                      </h3>
+                    </div>
+                    <p className="text-foreground/70 leading-relaxed">
+                      {week.description}
+                    </p>
+                  </div>
+                  <CheckCircle2 className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
                 </div>
-              ))
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 rounded-lg border border-border">
-                  <p className="font-medium text-foreground">Prospecting Campaign (70%)</p>
-                  <p className="text-sm text-muted-foreground">Find new customers using interest and lookalike targeting</p>
-                </div>
-                <div className="p-4 rounded-lg border border-border">
-                  <p className="font-medium text-foreground">Retargeting Campaign (30%)</p>
-                  <p className="text-sm text-muted-foreground">Re-engage website visitors and warm audiences</p>
-                </div>
-              </div>
-            )}
+              </Card>
+            ))}
           </div>
-        </Card>
+        </div>
 
-        {/* Audiences */}
-        <Card className="p-6 mb-6">
-          <h2 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            Target Audiences
-          </h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            {normalizedAudiences.length > 0 ? (
-              normalizedAudiences.map((item: any, i: number) => (
-                <div key={i} className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
-                  <p className="font-medium text-foreground">{item.value}</p>
-                </div>
-              ))
-            ) : (
-              <>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground mb-1">Primary Audience</p>
-                  <p className="font-medium text-foreground">
-                    {userInput.customer === "notsure" || !userInput.customer 
-                      ? "Broad Targeting (AI Recommended)" 
-                      : userInput.customer}
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground mb-1">Location</p>
-                  <p className="font-medium text-foreground">{userInput.country || "Your target market"}</p>
-                </div>
-              </>
-            )}
-          </div>
-        </Card>
-
-        {/* Creative Angles */}
-        <Card className="p-6 mb-6">
-          <h2 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-accent" />
-            Creative Angles & Concepts
-          </h2>
-          <div className="space-y-3">
-            {normalizedCreatives.length > 0 ? (
-              normalizedCreatives.map((item: any, i: number) => (
-                <div key={i} className="p-4 rounded-lg bg-muted/50 border border-border">
-                  <p className="font-medium text-foreground mb-1">{item.angle || item.title || item.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {item.description || item.detail || item.explanation || "Creative angle for your campaigns"}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <div className="space-y-3">
-                <div className="p-4 rounded-lg bg-muted/50 border border-border">
-                  <p className="font-medium text-foreground mb-1">Problem/Solution</p>
-                  <p className="text-sm text-muted-foreground">Address customer pain points and show your solution</p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted/50 border border-border">
-                  <p className="font-medium text-foreground mb-1">Social Proof</p>
-                  <p className="text-sm text-muted-foreground">Showcase testimonials and customer results</p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted/50 border border-border">
-                  <p className="font-medium text-foreground mb-1">Limited Offer</p>
-                  <p className="text-sm text-muted-foreground">Create urgency with time-limited promotions</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Setup Checklist */}
-        <Card className="p-6">
-          <h2 className="font-display font-semibold text-foreground mb-4">
-            Setup Checklist
-          </h2>
-          <div className="space-y-2">
-            {(normalizedChecklist.length > 0 ? normalizedChecklist : [
-              "Create your ad account (Meta Business Manager)",
-              "Install tracking pixel on your website",
-              "Set up conversion tracking",
-              "Prepare 3-5 ad creative variations",
-              "Write compelling ad copy",
-              "Set up your target audiences",
-              "Launch with a small test budget first",
-            ]).map((item: string, i: number) => {
-              const itemId = `checklist-${i}`;
-              const isChecked = checkedItems.includes(itemId);
-              const toggleItem = () => {
-                setCheckedItems(prev => 
-                  isChecked ? prev.filter(id => id !== itemId) : [...prev, itemId]
-                );
-              };
-              return (
-                <div 
-                  key={i} 
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={toggleItem}
-                >
-                  <Checkbox 
-                    id={itemId}
-                    checked={isChecked}
-                    onCheckedChange={toggleItem}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <label 
-                    htmlFor={itemId}
-                    className={`text-sm cursor-pointer ${isChecked ? 'text-muted-foreground line-through' : 'text-foreground'}`}
-                  >
-                    {item}
-                  </label>
-                </div>
-              );
-            })}
-          </div>
-          
-          {/* Download Strategy Button */}
-          <div className="mt-6 pt-4 border-t border-border">
-            <Button 
-              variant="outline" 
-              className="w-full gap-2" 
-              onClick={handleDownloadStrategy}
+        {/* CTA Section */}
+        <Card className="p-8 text-center bg-gradient-primary text-primary-foreground">
+          <h3 className="text-2xl font-display font-bold mb-3">
+            Ready to Launch Your Campaigns?
+          </h3>
+          <p className="text-primary-foreground/80 mb-6 max-w-2xl mx-auto">
+            Use this strategic blueprint as your guide. Track performance weekly and adjust based on real data.
+          </p>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <Button
+              size="lg"
+              variant="secondary"
+              onClick={handleDownload}
+              className="gap-2"
             >
-              📄 Download Step-by-Step Blueprint
+              <Download className="h-5 w-5" />
+              Download Full Plan
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate("/")}
+              className="bg-background/10 hover:bg-background/20 border-primary-foreground/20"
+            >
+              Start New Analysis
             </Button>
           </div>
         </Card>
-
-        {/* CTA */}
-        <div className="text-center mt-12">
-          <Button size="lg" className="gap-2" onClick={() => navigate("/")}>
-            <CheckCircle2 className="h-5 w-5" />
-            Got It - Let's Start!
-          </Button>
-          <p className="text-sm text-muted-foreground mt-4">
-            Ready to launch? Start implementing your plan today!
-          </p>
-        </div>
       </main>
     </div>
   );
