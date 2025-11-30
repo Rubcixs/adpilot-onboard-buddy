@@ -31,7 +31,63 @@ const toNumber = (val: any) => {
 };
 const round = (num: number, decimals = 2) => Number(Math.round(Number(num + 'e' + decimals)) + 'e-' + decimals);
 
-// 3. STRICT AI PROMPT
+// 3. AI METRICS BRAIN PROMPT (for metrics detection)
+const METRICS_BRAIN_PROMPT = `You are the AdPilot metrics brain.
+Your ONLY job is to look at a CSV export from ad platforms and return a single JSON object called metrics that summarizes global performance + campaign goal.
+
+You never print explanations, comments or text – only the JSON.
+
+1. Column detection (normalize names)
+Normalize column names to lower-case and trim spaces.
+Detect columns using flexible, contains-based matching (case insensitive):
+
+Spend: "spend", "amount_spent", "cost" (but not "cost_per")
+Impressions: "impression"
+Clicks: "click" (not "link_click", not "cost_per")
+Purchases: "purchase", "orders", "checkout", "sales"
+Leads: "lead", "lead_form", "signup"
+Revenue: "purchase_conversion_value", "value", "revenue", "total_conversion_value"
+Objective: "objective"
+
+2. Aggregate totals
+Sum across all rows (excluding platform summary rows).
+
+3. Detect campaign goal
+Priority: objective column → data-based inference (purchases > leads > traffic > awareness)
+
+4. Choose primary KPI & results
+- purchases + revenue → ROAS
+- purchases (no revenue) → CPP
+- leads → CPL
+- traffic → CPC
+- awareness → CPM
+
+5. Output format (RAW JSON ONLY, NO MARKDOWN):
+{
+  "totalSpend": number | 0,
+  "totalImpressions": number | 0,
+  "totalClicks": number | 0,
+  "totalPurchases": number | 0,
+  "totalLeads": number | 0,
+  "totalRevenue": number | 0,
+  "ctr": number | null,
+  "cpc": number | null,
+  "cpp": number | null,
+  "cpl": number | null,
+  "cpm": number | null,
+  "roas": number | null,
+  "goal": "purchases" | "leads" | "traffic" | "awareness" | "unknown",
+  "primaryKpiKey": string,
+  "primaryKpiLabel": string,
+  "primaryKpiValue": number | null,
+  "resultsLabel": string,
+  "resultsValue": number | 0
+}
+
+Never return Infinity or NaN. When denominator is 0, set metric to null.
+NO EXTRA TEXT. ONLY JSON.`;
+
+// 4. STRICT AI INSIGHTS PROMPT
 const ADPILOT_BRAIN_WITH_DATA = `You are an API endpoint. 
 ROLE: Data Analyst.
 INPUT: Ad metrics.
@@ -59,6 +115,63 @@ RULES:
 1. NO FAKE DATA. Use input names only.
 2. RAW JSON ONLY. No markdown.
 `;
+
+// 5. AI-Powered Metrics Detection Function
+async function detectMetricsWithAI(csvData: any[], columnNames: string[]): Promise<any> {
+  const claudeKey = Deno.env.get('ANTHROPIC_API_KEY');
+  if (!claudeKey) {
+    throw new Error('ANTHROPIC_API_KEY not configured');
+  }
+
+  // Prepare CSV summary for Claude (limit to first 50 rows + column info)
+  const sampleData = csvData.slice(0, 50);
+  const dataPayload = {
+    columns: columnNames,
+    rows: sampleData
+  };
+
+  console.log(`Calling AI Metrics Brain with ${csvData.length} rows (sending first 50)`);
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': claudeKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 4000,
+      temperature: 0,
+      system: METRICS_BRAIN_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: JSON.stringify(dataPayload)
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Claude API error:', response.status, errorText);
+    throw new Error(`Claude API failed: ${response.status}`);
+  }
+
+  const result = await response.json();
+  const rawText = result.content?.[0]?.text || '{}';
+  
+  console.log('AI Metrics Brain raw response:', rawText.substring(0, 200));
+  
+  // Clean and parse JSON
+  const cleanedJson = cleanJson(rawText);
+  const metrics = JSON.parse(cleanedJson);
+  
+  console.log('✅ AI Metrics Detection Complete:', metrics.primaryKpiLabel, '=', metrics.primaryKpiValue);
+  
+  return metrics;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
@@ -600,26 +713,65 @@ serve(async (req) => {
     console.log(`✅ Primary KPI: ${primaryKpiLabel} (${primaryKpiKey}) = ${primaryKpiValue}`);
     console.log(`✅ Results Metric: ${resultsLabel} = ${resultsValue}`);
 
-    // --- F. Core metrics object matching user's exact structure ---
-    const metrics = {
-      totalSpend: totalSpend > 0 ? round(totalSpend, 2) : null,
-      totalImpressions: totalImps > 0 ? totalImps : null,
-      totalClicks: totalClicks > 0 ? totalClicks : null,
-      totalPurchases: totalPurch > 0 ? totalPurch : null,
-      totalLeads: totalLeads > 0 ? totalLeads : null,
-      totalRevenue: totalRev > 0 ? round(totalRev, 2) : null,
-      ctr,
-      cpc,
-      cpp,
-      cpl,
-      cpm,
-      roas,
-      primaryKpiKey,
-      primaryKpiLabel,
-      primaryKpiValue,
-      resultsLabel,
-      resultsValue
-    };
+    // --- F. OPTIONAL: AI-Powered Metrics Detection ---
+    // Enable AI detection by setting USE_AI_METRICS=true environment variable
+    const useAiMetrics = Deno.env.get('USE_AI_METRICS') === 'true';
+    let metrics: any;
+    
+    if (useAiMetrics) {
+      console.log('🤖 Using AI-Powered Metrics Detection');
+      try {
+        // Use AI to detect metrics
+        metrics = await detectMetricsWithAI(csvData, headers);
+        console.log('✅ AI Metrics Detection Success');
+      } catch (aiError) {
+        console.error('⚠️ AI Metrics Detection failed, falling back to manual:', aiError);
+        // Fallback to manual detection
+        metrics = {
+          totalSpend: totalSpend > 0 ? round(totalSpend, 2) : null,
+          totalImpressions: totalImps > 0 ? totalImps : null,
+          totalClicks: totalClicks > 0 ? totalClicks : null,
+          totalPurchases: totalPurch > 0 ? totalPurch : null,
+          totalLeads: totalLeads > 0 ? totalLeads : null,
+          totalRevenue: totalRev > 0 ? round(totalRev, 2) : null,
+          ctr,
+          cpc,
+          cpp,
+          cpl,
+          cpm,
+          roas,
+          primaryKpiKey,
+          primaryKpiLabel,
+          primaryKpiValue,
+          resultsLabel,
+          resultsValue,
+          goal
+        };
+      }
+    } else {
+      // Use manual detection (default)
+      console.log('📊 Using Manual Metrics Detection');
+      metrics = {
+        totalSpend: totalSpend > 0 ? round(totalSpend, 2) : null,
+        totalImpressions: totalImps > 0 ? totalImps : null,
+        totalClicks: totalClicks > 0 ? totalClicks : null,
+        totalPurchases: totalPurch > 0 ? totalPurch : null,
+        totalLeads: totalLeads > 0 ? totalLeads : null,
+        totalRevenue: totalRev > 0 ? round(totalRev, 2) : null,
+        ctr,
+        cpc,
+        cpp,
+        cpl,
+        cpm,
+        roas,
+        primaryKpiKey,
+        primaryKpiLabel,
+        primaryKpiValue,
+        resultsLabel,
+        resultsValue,
+        goal
+      };
+    }
 
     // Rows calculation for AI insights
     const rows = Array.from(rowMap.entries()).map(([name, d]) => ({
