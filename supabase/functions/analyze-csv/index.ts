@@ -183,9 +183,9 @@ serve(async (req) => {
 
     // Detect all metric columns (base columns only, no "Total X" variants)
     let spendCol = findCol(/^spent$|^spend$|^amountspent|^izterets$|^terini$/) || headers.filter(isNonTotalColumn).find(h => h.includes('Amount spent'));
-    let revCol = findCol(/conversionvalue|purchasevalue|^ienakumi$|^pelnja$|^vertiba$/) || headers.filter(isNonTotalColumn).find(h => h.includes('conversion value'));
-    let purchCol = findCol(/^purchases$|^websitepurchases$|^offlinepurchases$|^metapurchases$/) || headers.filter(isNonTotalColumn).find(h => h === 'Purchases' || h === 'Website purchases');
-    let leadsCol = findCol(/^leads$|^websiteleads$|^offlineleads$|^metaleads$/) || headers.filter(isNonTotalColumn).find(h => h === 'Leads' || h === 'Website leads');
+    let revCol = findCol(/conversionvalue|purchasevalue|^ienakumi$|^pelnja$|^vertiba$|^revenue$|^totalconversionvalue$/) || headers.filter(isNonTotalColumn).find(h => h.includes('conversion value') || h.includes('revenue') || h.includes('value'));
+    let purchCol = findCol(/^purchases$|^totalpurchases$|^purchase$|^websitepurchases$|^offlinepurchases$|^metapurchases$|^inapppurchases$|^offsiteconversionpurchase$|^actionspurchase$|^purchaseevent$/) || headers.filter(isNonTotalColumn).find(h => h === 'Purchases' || h === 'Website purchases' || h === 'Purchase' || h.includes('purchase'));
+    let leadsCol = findCol(/^leads$|^totallead$|^lead$|^websiteleads$|^offlineleads$|^metaleads$|^onfacebooklead$|^generatedleads$|^conversions$/) || headers.filter(isNonTotalColumn).find(h => h === 'Leads' || h === 'Website leads' || h === 'Lead' || h === 'Generated leads' || h.includes('lead'));
     let resultsCol = findCol(/^results$/) || headers.filter(isNonTotalColumn).find(h => h === 'Results');
     let impsCol = findCol(/^impressions$|^skatijumi$/) || headers.filter(isNonTotalColumn).find(h => h === 'Impressions');
     let clicksCol = findCol(/^clicksall$|^clicks$|^klikski$/) || headers.filter(isNonTotalColumn).find(h => h === 'Clicks (all)' || h === 'Clicks');
@@ -197,6 +197,15 @@ serve(async (req) => {
     let adsetNameForGoal = headers.filter(isNonTotalColumn).find(h => h.toLowerCase().includes('ad set name') || h.toLowerCase().includes('adset name'));
 
     console.log(`Column Detection: Spend=${spendCol}, Revenue=${revCol}, Purchases=${purchCol}, Leads=${leadsCol}, Results=${resultsCol}, Objective=${objectiveCol}`);
+    
+    // Special case: If objective indicates leads but no leads column exists, treat Results as Leads
+    if (objectiveCol && resultsCol && !leadsCol) {
+      const sampleObjective = csvData[0] && csvData[0][objectiveCol] ? String(csvData[0][objectiveCol]).toLowerCase() : '';
+      if (sampleObjective.includes('lead')) {
+        leadsCol = resultsCol;
+        console.log(`⚠️ Objective is leads-based but no Leads column found. Using Results column as Leads.`);
+      }
+    }
 
     // --- B. Aggregate Data with Total Row Detection ---
     // Step 1: Calculate tentative totals from all rows
@@ -352,15 +361,15 @@ serve(async (req) => {
     
     // --- E. SELECT PRIMARY KPI (NEVER NULL/ZERO) ---
     //
-    // PRIMARY KPI SELECTION LOGIC BY GOAL:
+    // PRIMARY KPI SELECTION HIERARCHY:
     //
-    // PURCHASES:  ROAS → CPP → Purchase Count → CPC → CTR → Impressions
-    // LEADS:      CPL → Lead Count → CPC → CTR → Impressions
-    // TRAFFIC:    CPC → CTR → Click Count → Impressions
+    // CRITICAL RULE: Conversions (purchases/leads) ALWAYS take priority over traffic (CPC)
+    // NEVER select CPC as primary KPI if totalPurch > 0 OR totalLeads > 0
+    //
+    // PURCHASES:  ROAS → CPP → Purchase Count → CTR → Impressions
+    // LEADS:      CPL → Lead Count → CTR → Impressions  
+    // TRAFFIC:    CPC → CTR → Click Count → Impressions (only if no conversions)
     // AWARENESS:  CPM → Impressions
-    //
-    // Each KPI is validated to ensure denominator > 0 before selection
-    // Falls back to next option if current option is null/0/invalid
     //
     let primaryKpiKey = "";
     let primaryKpiLabel = "";
@@ -369,10 +378,23 @@ serve(async (req) => {
     let resultsValue: number | null = null;
     
     const revenueAvailable = totalRev > 0;
+    const hasConversions = totalPurch > 0 || totalLeads > 0;
     
-    // GOAL-BASED KPI SELECTION WITH FALLBACK CHAINS
+    // STEP 1: Override goal if we have conversions but goal was inferred as traffic
+    // This ensures we never show CPC when there are actual conversions
+    if (hasConversions && goal === "traffic") {
+      if (totalPurch > 0) {
+        goal = "purchases";
+        console.log(`⚠️ Goal override: Found purchases (${totalPurch}), changing from traffic to purchases`);
+      } else if (totalLeads > 0) {
+        goal = "leads";
+        console.log(`⚠️ Goal override: Found leads (${totalLeads}), changing from traffic to leads`);
+      }
+    }
+    
+    // STEP 2: Goal-based KPI selection with conversion-first hierarchy
     if (goal === "purchases") {
-      // Try: ROAS → CPP → Purchase Count → CPC → CTR → Impressions
+      // Priority: ROAS → CPP → Purchase Count → CTR → Impressions (NO CPC fallback)
       if (revenueAvailable && roas !== null && roas > 0) {
         primaryKpiKey = "roas";
         primaryKpiLabel = "ROAS";
@@ -385,10 +407,6 @@ serve(async (req) => {
         primaryKpiKey = "purchases";
         primaryKpiLabel = "Total Purchases";
         primaryKpiValue = totalPurch;
-      } else if (cpc !== null && cpc > 0 && totalClicks > 0) {
-        primaryKpiKey = "cpc";
-        primaryKpiLabel = "Cost per Click";
-        primaryKpiValue = cpc;
       } else if (ctr !== null && ctr > 0) {
         primaryKpiKey = "ctr";
         primaryKpiLabel = "CTR";
@@ -412,7 +430,7 @@ serve(async (req) => {
       }
       
     } else if (goal === "leads") {
-      // Try: CPL → Lead Count → CPC → CTR → Impressions
+      // Priority: CPL → Lead Count → CTR → Impressions (NO CPC fallback)
       if (cpl !== null && cpl > 0 && totalLeads > 0) {
         primaryKpiKey = "cpl";
         primaryKpiLabel = "Cost per Lead";
@@ -421,10 +439,6 @@ serve(async (req) => {
         primaryKpiKey = "leads";
         primaryKpiLabel = "Total Leads";
         primaryKpiValue = totalLeads;
-      } else if (cpc !== null && cpc > 0 && totalClicks > 0) {
-        primaryKpiKey = "cpc";
-        primaryKpiLabel = "Cost per Click";
-        primaryKpiValue = cpc;
       } else if (ctr !== null && ctr > 0) {
         primaryKpiKey = "ctr";
         primaryKpiLabel = "CTR";
@@ -448,7 +462,8 @@ serve(async (req) => {
       }
       
     } else if (goal === "traffic") {
-      // Try: CPC → CTR → Click Count → Impressions
+      // CRITICAL: Only use traffic metrics if there are NO conversions
+      // If conversions exist, this code should never be reached due to goal override above
       if (cpc !== null && cpc > 0 && totalClicks > 0) {
         primaryKpiKey = "cpc";
         primaryKpiLabel = "Cost per Click";
@@ -511,7 +526,7 @@ serve(async (req) => {
       console.warn(`⚠️ Warning: Total Spend is 0. Cost-based KPIs (CPC, CPL, CPP, CPM) will be null.`);
     }
     
-    console.log(`✅ Goal Detection Complete: ${goal}`);
+    console.log(`✅ Goal Detection Complete: ${goal} (Purchases: ${totalPurch}, Leads: ${totalLeads}, Clicks: ${totalClicks})`);
     console.log(`✅ Primary KPI: ${primaryKpiLabel} (${primaryKpiKey}) = ${primaryKpiValue}`);
     console.log(`✅ Results Metric: ${resultsLabel} = ${resultsValue}`);
 
