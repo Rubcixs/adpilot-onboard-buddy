@@ -404,10 +404,10 @@ const Analysis = () => {
               </Card>
             ) : (
               <>
-                {/* MAIN DEEP DIVE - Always show if deepAnalysis exists */}
+                {/* MAIN DEEP DIVE */}
                 {insights?.deepAnalysis ? (
                   <>
-                    {/* 1. Funnel Health */}
+                    {/* Funnel Health */}
                     {insights.deepAnalysis.funnelHealth && (
                       <Card className={`p-6 border-l-4 ${
                         insights.deepAnalysis.funnelHealth.status === 'Broken' 
@@ -417,148 +417,93 @@ const Analysis = () => {
                           : 'border-l-accent'
                       }`}>
                         <div className="flex items-start gap-4">
-                          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <Activity className="h-5 w-5 text-primary" />
+                          <div className="p-2 bg-primary/10 rounded-lg">
+                            <Activity className="h-5 w-5 text-primary"/>
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
-                              <h3 className="font-display font-semibold text-foreground">
-                                {insights.deepAnalysis.funnelHealth.title}
-                              </h3>
-                              <Badge variant={
-                                insights.deepAnalysis.funnelHealth.status === 'Broken' 
-                                  ? 'destructive' 
-                                  : 'default'
-                              }>
+                              <h3 className="font-semibold text-foreground">{insights.deepAnalysis.funnelHealth.title}</h3>
+                              <Badge variant={insights.deepAnalysis.funnelHealth.status === 'Broken' ? 'destructive' : 'default'}>
                                 {insights.deepAnalysis.funnelHealth.status}
                               </Badge>
                             </div>
-                            <p className="text-foreground leading-relaxed mb-3">
-                              {insights.deepAnalysis.funnelHealth.description}
-                            </p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 p-2 rounded-md w-fit">
-                              <Target className="h-4 w-4" />
-                              <span>Fix Metric: <strong>{insights.deepAnalysis.funnelHealth.metricToWatch}</strong></span>
-                            </div>
+                            <p className="text-sm text-muted-foreground leading-relaxed">{insights.deepAnalysis.funnelHealth.description}</p>
                           </div>
                         </div>
                       </Card>
                     )}
 
-                    {/* SEGMENT / PATTERN ANALYSIS */}
+                    {/* SEGMENT TRENDS (Only if real data exists) */}
                     {insights.segmentAnalysis && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        
-                        {/* Demographics Card */}
-                        <Card className="p-5 border-l-4 border-l-purple-500 bg-purple-50/5">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
-                              <Users className="h-5 w-5" />
-                            </div>
-                            <h4 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Demographics</h4>
-                          </div>
-                          <p className="font-medium text-foreground text-sm leading-relaxed">
-                            {insights.segmentAnalysis.demographics.finding}
-                          </p>
-                        </Card>
-
-                        {/* Placement Card */}
-                        <Card className="p-5 border-l-4 border-l-blue-500 bg-blue-50/5">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                              <Smartphone className="h-5 w-5" />
-                            </div>
-                            <h4 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Placement</h4>
-                          </div>
-                          <p className="font-medium text-foreground text-sm leading-relaxed">
-                            {insights.segmentAnalysis.placement.finding}
-                          </p>
-                        </Card>
-
-                        {/* Time Card */}
-                        <Card className="p-5 border-l-4 border-l-orange-500 bg-orange-50/5">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
-                              <CalendarClock className="h-5 w-5" />
-                            </div>
-                            <h4 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Best Time</h4>
-                          </div>
-                          <p className="font-medium text-foreground text-sm leading-relaxed">
-                            {insights.segmentAnalysis.time.finding}
-                          </p>
-                        </Card>
-                        
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t">
+                        {insights.segmentAnalysis.demographics && (
+                          <Card className="p-5 border-l-4 border-l-purple-500 bg-purple-50/5">
+                            <h4 className="font-semibold text-sm mb-2 flex gap-2"><Users className="h-4 w-4"/> Demographics</h4>
+                            <p className="text-sm text-foreground">{insights.segmentAnalysis.demographics.finding}</p>
+                          </Card>
+                        )}
+                        {insights.segmentAnalysis.placement && (
+                          <Card className="p-5 border-l-4 border-l-blue-500 bg-blue-50/5">
+                            <h4 className="font-semibold text-sm mb-2 flex gap-2"><Smartphone className="h-4 w-4"/> Placement</h4>
+                            <p className="text-sm text-foreground">{insights.segmentAnalysis.placement.finding}</p>
+                          </Card>
+                        )}
+                        {insights.segmentAnalysis.time && (
+                          <Card className="p-5 border-l-4 border-l-orange-500 bg-orange-50/5">
+                            <h4 className="font-semibold text-sm mb-2 flex gap-2"><CalendarClock className="h-4 w-4"/> Timing</h4>
+                            <p className="text-sm text-foreground">{insights.segmentAnalysis.time.finding}</p>
+                          </Card>
+                        )}
                       </div>
                     )}
 
-                    {/* 2. Financial Grid */}
+                    {/* Financial Grid */}
                     <div className="grid md:grid-cols-2 gap-6">
                       {/* Opportunities */}
                       <Card className="p-6">
-                        <h3 className="font-display font-semibold text-accent mb-4 flex items-center gap-2">
-                          <TrendingUp className="h-5 w-5" />
-                          Profit Opportunities
+                        <h3 className="font-semibold text-accent flex items-center gap-2 mb-4">
+                          <TrendingUp className="h-5 w-5"/> Profit Opportunities
                         </h3>
                         <div className="space-y-3">
                           {insights.deepAnalysis.opportunities?.map((item, i) => (
-                            <div key={i} className="bg-accent/5 p-3 rounded-lg border border-accent/20">
-                              <p className="font-medium text-foreground text-sm mb-1">{item.title}</p>
+                            <div key={i} className="bg-accent/5 p-3 rounded-lg border border-accent/10">
+                              <div className="flex justify-between">
+                                <p className="font-medium text-sm">{item.title}</p> 
+                                <Badge variant="outline" className="text-[10px]">{(item as any).impact || 'High'}</Badge>
+                              </div>
                               <p className="text-xs text-muted-foreground">{item.description}</p>
                             </div>
                           ))}
-                          {(!insights.deepAnalysis.opportunities || insights.deepAnalysis.opportunities.length === 0) && (
-                            <p className="text-sm text-muted-foreground">No specific opportunities found.</p>
+                          {insights.deepAnalysis.opportunities.length === 0 && (
+                            <p className="text-sm text-muted-foreground">No high-impact opportunities found.</p>
                           )}
                         </div>
                       </Card>
 
                       {/* Money Wasters */}
                       <Card className="p-6">
-                        <h3 className="font-display font-semibold text-destructive mb-4 flex items-center gap-2">
-                          <Banknote className="h-5 w-5" />
-                          Budget Leaks
+                        <h3 className="font-semibold text-destructive flex items-center gap-2 mb-4">
+                          <Banknote className="h-5 w-5"/> Budget Leaks
                         </h3>
                         <div className="space-y-3">
                           {insights.deepAnalysis.moneyWasters?.map((item, i) => (
-                            <div key={i} className="bg-destructive/5 p-3 rounded-lg border border-destructive/20">
-                              <p className="font-medium text-foreground text-sm mb-1">{item.title}</p>
+                            <div key={i} className="bg-destructive/5 p-3 rounded-lg border border-destructive/10">
+                              <div className="flex justify-between">
+                                <p className="font-medium text-sm">{item.title}</p> 
+                                <Badge variant="outline" className="text-[10px]">{(item as any).impact || 'Savings'}</Badge>
+                              </div>
                               <p className="text-xs text-muted-foreground">{item.description}</p>
                             </div>
                           ))}
-                          {(!insights.deepAnalysis.moneyWasters || insights.deepAnalysis.moneyWasters.length === 0) && (
+                          {insights.deepAnalysis.moneyWasters.length === 0 && (
                             <p className="text-sm text-muted-foreground">Budget spend looks efficient.</p>
                           )}
                         </div>
                       </Card>
                     </div>
-
-                    {/* 3. Creative Fatigue */}
-                    {insights.deepAnalysis.creativeFatigue && insights.deepAnalysis.creativeFatigue.length > 0 && (
-                      <Card className="p-6 border-warning/50 bg-warning/5">
-                        <h3 className="font-display font-semibold text-warning mb-4 flex items-center gap-2">
-                          <Megaphone className="h-5 w-5" />
-                          Creative Fatigue Warnings
-                        </h3>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          {insights.deepAnalysis.creativeFatigue.map((item, i) => (
-                            <div key={i} className="flex items-start gap-3">
-                              <div className="h-2 w-2 mt-2 rounded-full bg-warning flex-shrink-0" />
-                              <div>
-                                <p className="font-medium text-foreground text-sm">{item.title}</p>
-                                <p className="text-xs text-muted-foreground">{item.description}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </Card>
-                    )}
                   </>
                 ) : (
-                  <div className="p-8 text-center border rounded-xl bg-muted/20">
-                    <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-foreground font-medium">Detailed deep dive could not be generated from this data.</p>
-                    <p className="text-sm text-muted-foreground mt-1">The AI may need more complete metrics to generate insights.</p>
-                  </div>
+                  <div className="p-8 text-center text-muted-foreground">Deep analysis unavailable.</div>
                 )}
               </>
             )}
