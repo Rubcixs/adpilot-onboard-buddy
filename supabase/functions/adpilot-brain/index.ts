@@ -99,7 +99,7 @@ serve(async (req) => {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-3-5-sonnet-latest',
         max_tokens: 2000,
         temperature: 0.3,
         system: ADPILOT_BRAIN_NO_DATA,

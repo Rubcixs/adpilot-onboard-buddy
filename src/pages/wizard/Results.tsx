@@ -121,7 +121,7 @@ const Results = () => {
     ],
   };
 
-  const data = mockData; // In production: location.state?.forecastData || mockData
+  const data = location.state?.plan?.aiForecast || mockData;
 
   const handleDownload = () => {
     const content = `
