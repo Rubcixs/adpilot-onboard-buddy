@@ -261,12 +261,12 @@ Do not invent metrics—only use received values.`;
 
 // 5. AI-Powered Metrics Detection Function
 async function detectMetricsWithAI(csvData: any[], columnNames: string[]): Promise<any> {
-  const claudeKey = Deno.env.get('ANTHROPIC_API_KEY');
-  if (!claudeKey) {
-    throw new Error('ANTHROPIC_API_KEY not configured');
+  const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!lovableKey) {
+    throw new Error('LOVABLE_API_KEY not configured');
   }
 
-  // Prepare CSV summary for Claude (limit to first 50 rows + column info)
+  // Prepare CSV summary for AI (limit to first 50 rows + column info)
   const sampleData = csvData.slice(0, 50);
   const dataPayload = {
     columns: columnNames,
@@ -275,19 +275,21 @@ async function detectMetricsWithAI(csvData: any[], columnNames: string[]): Promi
 
   console.log(`Calling AI Metrics Brain with ${csvData.length} rows (sending first 50)`);
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'x-api-key': claudeKey,
-      'anthropic-version': '2023-06-01',
+      'Authorization': `Bearer ${lovableKey}`,
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-5',
+      model: 'google/gemini-2.5-flash',
       max_tokens: 4000,
       temperature: 0,
-      system: METRICS_BRAIN_PROMPT,
       messages: [
+        {
+          role: 'system',
+          content: METRICS_BRAIN_PROMPT
+        },
         {
           role: 'user',
           content: JSON.stringify(dataPayload)
@@ -298,12 +300,12 @@ async function detectMetricsWithAI(csvData: any[], columnNames: string[]): Promi
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Claude API error:', response.status, errorText);
-    throw new Error(`Claude API failed: ${response.status}`);
+    console.error('Lovable AI error:', response.status, errorText);
+    throw new Error(`Lovable AI failed: ${response.status}`);
   }
 
   const result = await response.json();
-  const rawText = result.content?.[0]?.text || '{}';
+  const rawText = result.choices?.[0]?.message?.content || '{}';
   
   console.log('AI Metrics Brain raw response:', rawText.substring(0, 200));
   
@@ -412,7 +414,7 @@ serve(async (req) => {
     
     console.log(`Filtered ${rawData.length - csvData.length} summary rows, kept ${csvData.length} atomic rows`);
 
-    const openAiKey = Deno.env.get('OPENAI_API_KEY')
+    const lovableKey = Deno.env.get('LOVABLE_API_KEY')
     console.log(`Analyzing ${file.name} (${csvData.length} rows)`);
 
     // --- B. STRICT DETERMINISTIC METRICS DETECTION ---
@@ -946,36 +948,37 @@ Analyze the data and return the comprehensive insights + recommendations JSON.`;
     let aiInsights = null;
     
     try {
-      if (!openAiKey) throw new Error("No API Key");
+      if (!lovableKey) throw new Error("No API Key");
 
-      console.log('Calling Claude API for insights...');
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      console.log('Calling Lovable AI for insights...');
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'x-api-key': openAiKey,
-          'anthropic-version': '2023-06-01',
+          'Authorization': `Bearer ${lovableKey}`,
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
+          model: 'google/gemini-2.5-flash',
           max_tokens: 4000,
           temperature: 0,
-          system: ADPILOT_INSIGHTS_SYSTEM,
-          messages: [{ role: 'user', content: userPrompt }]
+          messages: [
+            { role: 'system', content: ADPILOT_INSIGHTS_SYSTEM },
+            { role: 'user', content: userPrompt }
+          ]
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Claude API error:', response.status, errorText);
-        throw new Error(`Claude API failed: ${response.status}`);
+        console.error('Lovable AI error:', response.status, errorText);
+        throw new Error(`Lovable AI failed: ${response.status}`);
       }
 
       const aiData = await response.json();
       console.log("AI RAW RESPONSE:", JSON.stringify(aiData, null, 2));
       
-       if (aiData.content && aiData.content[0]?.text) {
-          const cleanedText = cleanJson(aiData.content[0].text);
+       if (aiData.choices && aiData.choices[0]?.message?.content) {
+          const cleanedText = cleanJson(aiData.choices[0].message.content);
           const comprehensiveResponse = JSON.parse(cleanedText);
           console.log('✅ Comprehensive Analysis parsed:', comprehensiveResponse);
           
