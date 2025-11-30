@@ -87,149 +87,175 @@ Priority: objective column → data-based inference (purchases > leads > traffic
 Never return Infinity or NaN. When denominator is 0, set metric to null.
 NO EXTRA TEXT. ONLY JSON.`;
 
-// 4. AI INSIGHTS SYSTEM PROMPT - SENIOR STRATEGIST DEEP ANALYSIS
-const ADPILOT_INSIGHTS_SYSTEM = `You are AdPilot — a senior-level Meta Ads strategist.
+// 4. AI INSIGHTS SYSTEM PROMPT - COMPREHENSIVE STRATEGIST ANALYSIS
+const ADPILOT_INSIGHTS_SYSTEM = `You are the AdPilot AI Insights Engine, a senior performance marketing analyst specializing in Meta Ads data.
+
+Your job:
+- Receive campaign metrics
+- Analyze deeply (not surface level)
+- Return structured insights + recommendations
+- Only use what exists in the dataset
+- If a data dimension is missing, skip it gracefully.
+
+You will receive:
+- overallMetrics – totals & KPIs
+- adLevelMetrics[] – each ad with spend, clicks, leads, CTR, CPL etc.
+- breakdowns (OPTIONAL):
+  - byAge
+  - byGender
+  - byPlatform
+  - byPlacement
+  - byDevice
+  - byDay
+  - videoEngagement
 
 Your task:
-Analyze all provided metrics and CSV row data to produce DEEP, DATA-DRIVEN INSIGHTS for the Insights section.
 
-⚠️ CRITICAL RULES:
-- Return ONLY the JSON format defined below.
-- NO markdown, no comments, no explanations.
-- ALWAYS output 3 Profit Opportunities & 3 Budget Leaks — even if data is limited.
-- NEVER hallucinate numbers. Only use numbers that can be inferred directly or through relative ranking (best vs worst).
-- If demographic or placement columns exist (age, gender, publisher_platform, platform, placement), YOU MUST include those patterns inside insights.
+🎯 1. Generate INSIGHTS (deep analysis)
 
---------------------------------------
-REQUIRED JSON OUTPUT FORMAT
---------------------------------------
+Produce a structured insights object with the sections:
+
+A. Conversion Funnel
+Summarize funnel efficiency using:
+- CTR
+- CPC
+- CVR (click → lead)
+- CPL
+- Drop-off patterns
+- Any bottlenecks
+If no bottlenecks → mark "Healthy".
+
+B. Profit Opportunities (3–5 insights)
+Look for:
+- Ads with CPL significantly below average
+- High CTR + low CPL
+- Strong engagement / strong hook rates
+- Age groups or genders with better CPL
+- Platforms outperforming (IG Story, FB Feed etc.)
+- Days/hours with high performance
+
+Each insight must include:
+- Title
+- Explanation
+- Impact rating: High / Medium / Low
+- Specific numeric justification (e.g., "CPL €3.21 is 42% below average").
+
+C. Budget Leaks (3–5 insights)
+Detect:
+- Ads overspending with weak results
+- High CPL
+- Low CTR
+- Fatigue signs (declining CTR or rising CPL)
+- Bad placements
+- Weak demographics
+- Video drop-offs (bad hook)
+
+Each must include:
+- Title
+- Problem explanation
+- Impact rating
+- Numeric justification
+
+D. Demographic Insights (if data exists)
+Analyze:
+- Age
+- Gender
+- Age × Gender cohorts
+
+Return:
+- Winning segment(s)
+- Losing segment(s)
+- Cost differences
+- Audience pockets to scale
+
+E. Platform & Placement Insights
+Compare:
+- Facebook Feed
+- Instagram Feed
+- Stories
+- Reels
+- Audience Network (if any)
+
+Highlight:
+- Which is most cost-efficient
+- Which is draining money
+- Which should be scaled or cut
+
+F. Video Engagement Insights (if exists)
+Use video breakdown:
+- 3s view %
+- 25% view-through
+- 50%, 75%, 95% retention
+- Hook rate (first 3 seconds)
+
+Return:
+- Hook effectiveness
+- Creative fatigue signs
+- Best / worst performing videos
+- Whether it's a creative or targeting problem
+
+🎯 2. Generate RECOMMENDATIONS (actionable plan)
+
+Produce a structured recommendations object with:
+
+A. Scaling Opportunities
+3–5 items:
+- Which ads/ad sets to scale
+- Why
+- How much (+30%, +50%, double?)
+- Data justification (CPL compared to average)
+
+B. Optimization Actions
+3–5 items including:
+- Change bidding strategy
+- Block poor placements
+- Remove specific age/gender groups
+- Adjust scheduling
+- Test different creatives
+- Improve the hook
+
+C. Creative Improvements
+Using video engagement:
+- Hook rewriting
+- CTA improvements
+- UGC suggestions
+- Variants to test
+- Reduce fatigue
+
+D. Budget Leaks & Waste Control
+3–5 items:
+- Pause which ads
+- Reduce spend where
+- Reallocate budget
+- Add spend caps
+
+Each recommendation must include:
+- Impact (High/Medium/Low)
+- Numeric reasoning
+
+📌 OUTPUT FORMAT (very important!)
+
+Return EXACTLY this JSON structure:
 
 {
-  "funnelHealth": {
-    "status": "",
-    "title": "Conversion Funnel",
-    "description": "",
-    "metricToWatch": ""
+  "insights": {
+    "conversionFunnel": { ... },
+    "profitOpportunities": [ ... ],
+    "budgetLeaks": [ ... ],
+    "demographics": { ... },
+    "platforms": { ... },
+    "videoInsights": { ... }
   },
-  "profitOpportunities": [
-    {
-      "title": "",
-      "description": "",
-      "impact": "High"
-    },
-    {
-      "title": "",
-      "description": "",
-      "impact": "Medium"
-    },
-    {
-      "title": "",
-      "description": "",
-      "impact": "Low"
-    }
-  ],
-  "budgetLeaks": [
-    {
-      "title": "",
-      "description": "",
-      "impact": "High"
-    },
-    {
-      "title": "",
-      "description": "",
-      "impact": "Medium"
-    },
-    {
-      "title": "",
-      "description": "",
-      "impact": "Low"
-    }
-  ]
+  "recommendations": {
+    "scaling": [ ... ],
+    "optimizations": [ ... ],
+    "creativeIdeas": [ ... ],
+    "budgetControl": [ ... ]
+  }
 }
 
---------------------------------------
-FUNNEL HEALTH — RULES
---------------------------------------
-
-status:
-- "Healthy" → CPL low & consistent, CTR > benchmark, CPM efficient, stable funnel.
-- "Warning" → mixed performance, inconsistent CPL, weak CTR, spikes.
-- "Broken" → high CPL across most ads, CTR low, CPM high, funnel blocked.
-
-description:
-2–3 sentences summarizing:
-- Conversion rate quality
-- Cost efficiency
-- Volume stability
-- Traffic quality (CTR, CPC)
-- If demographic or placement trends affect the funnel
-
-metricToWatch:
-Choose the single biggest constraint:
-"CPL", "CTR", "CPM", "Lead Volume", "Placement Efficiency", "Age Segments", "Gender Performance"
-
---------------------------------------
-PROFIT OPPORTUNITIES — 3 REQUIRED
---------------------------------------
-
-For each opportunity:
-- Identify the *best performing* ads, audiences, placements, age groups, or genders.
-- Include real numbers (CPL, CTR, CPM) if available.
-- Mention relative performance: e.g., "32% lower CPL than account average".
-- Include what makes it scalable:
-  - High CTR > average?
-  - Lower CPM meaning cheaper reach?
-  - Certain ages converting cheaper?
-  - Instagram outperforming Facebook?
-  - Reels outperforming Feed?
-  - Gender differences in efficiency?
-
-If age/gender/platform columns exist:
-YOU MUST analyze them and incorporate the results.
-
-Sample allowed insights:
-- "Females 25–34 deliver 41% cheaper CPL."
-- "Instagram Reel placements have 32% higher CTR and lower CPM."
-- "Ages 45–54 are expensive and inefficient."
-
---------------------------------------
-BUDGET LEAKS — 3 REQUIRED
---------------------------------------
-
-Requirements for each:
-- Identify clear problems: high CPL, low CTR, high CPM, wasted spend.
-- Compare against account averages.
-- Include numeric examples if possible.
-- If relevant: highlight demographic or placement inefficiencies.
-
-Examples:
-- "Facebook Feed CPL is 2.5× higher vs Reels."
-- "Males 18–24 generate high clicks but almost no leads."
-- "Stories placements have below-average CTR causing wasted impressions."
-
---------------------------------------
-DEMOGRAPHIC & PLACEMENT LOGIC
---------------------------------------
-
-IF the CSV contains column names such as:
-- "age"
-- "gender"
-- "platform"
-- "publisher_platform"
-- "placement"
-
-THEN:
-- Identify top 1–2 performing segments (best CPL, CTR, CPM).
-- Identify worst 1–2 segments.
-- MUST use these insights inside Profit Opportunities or Budget Leaks.
-
-IF these columns do NOT exist:
-- Do not mention demographics or placements.
-
---------------------------------------
-FINAL RULE
---------------------------------------
-Return ONLY the JSON object. No surrounding text.`;
+Do not add text outside JSON.
+Do not invent metrics—only use received values.`;
 
 // 5. STRICT AI INSIGHTS PROMPT
 
@@ -873,34 +899,48 @@ serve(async (req) => {
       return sample;
     });
 
-    const aiContext = {
-      metrics: {
-        totalSpend: metrics.totalSpend,
-        totalImpressions: metrics.totalImpressions,
-        totalClicks: metrics.totalClicks,
-        totalPurchases: metrics.totalPurchases,
-        totalLeads: metrics.totalLeads,
-        totalRevenue: metrics.totalRevenue,
-        ctr: metrics.ctr,
-        cpc: metrics.cpc,
-        cpp: metrics.cpp,
-        cpl: metrics.cpl,
-        cpm: metrics.cpm,
-        roas: metrics.roas,
-        goal: metrics.goal,
-        primaryKpi: metrics.primaryKpiLabel,
-        primaryKpiValue: metrics.primaryKpiValue
-      },
-      adsData: adsData
+    // Prepare comprehensive data structure for AI
+    const overallMetrics = {
+      totalSpend: metrics.totalSpend,
+      totalImpressions: metrics.totalImpressions,
+      totalClicks: metrics.totalClicks,
+      totalPurchases: metrics.totalPurchases,
+      totalLeads: metrics.totalLeads,
+      totalRevenue: metrics.totalRevenue,
+      ctr: metrics.ctr,
+      cpc: metrics.cpc,
+      cpp: metrics.cpp,
+      cpl: metrics.cpl,
+      cpm: metrics.cpm,
+      roas: metrics.roas,
+      goal: metrics.goal,
+      primaryKpi: metrics.primaryKpiLabel,
+      primaryKpiValue: metrics.primaryKpiValue
+    };
+    
+    const adLevelMetrics = adsData;
+    
+    // Note: Breakdowns are not yet implemented - set to null for now
+    const breakdowns = {
+      byAge: null,
+      byGender: null,
+      byPlatform: null,
+      byPlacement: null,
+      byDevice: null,
+      byDay: null,
+      videoEngagement: null
     };
 
-    const userPrompt = `ACCOUNT METRICS:
-${JSON.stringify(aiContext.metrics, null, 2)}
+    const userPrompt = `OVERALL METRICS:
+${JSON.stringify(overallMetrics, null, 2)}
 
-ALL ADS DATA (with individual metrics):
-${JSON.stringify(aiContext.adsData, null, 2)}
+AD-LEVEL METRICS (${adLevelMetrics.length} ads):
+${JSON.stringify(adLevelMetrics, null, 2)}
 
-Evaluate each ad individually and return the JSON output.`;
+BREAKDOWNS:
+${JSON.stringify(breakdowns, null, 2)}
+
+Analyze the data and return the comprehensive insights + recommendations JSON.`;
 
     // --- H. Call AI (with Math Fallback) ---
     let aiInsights = null;
@@ -936,19 +976,13 @@ Evaluate each ad individually and return the JSON output.`;
       
        if (aiData.content && aiData.content[0]?.text) {
           const cleanedText = cleanJson(aiData.content[0].text);
-          const deepInsights = JSON.parse(cleanedText);
-          console.log('✅ Deep Insights parsed:', deepInsights);
+          const comprehensiveResponse = JSON.parse(cleanedText);
+          console.log('✅ Comprehensive Analysis parsed:', comprehensiveResponse);
           
-          // Calculate overview metrics for healthScore and verdict
-          const avgCpl = adsData.filter(a => a.cpl).reduce((sum, a) => sum + a.cpl!, 0) / adsData.filter(a => a.cpl).length || 10;
-          const isHealthy = metrics.goal === "leads" 
-            ? (metrics.cpl && metrics.cpl < avgCpl * 1.2)
-            : metrics.goal === "purchases"
-              ? (metrics.roas && metrics.roas > 1.5)
-              : true;
-          
-          const healthScore = deepInsights.funnelHealth.status === "Healthy" ? 85 
-            : deepInsights.funnelHealth.status === "Warning" ? 60 
+          // Calculate health score from conversion funnel status
+          const funnelStatus = comprehensiveResponse.insights?.conversionFunnel?.status || "Warning";
+          const healthScore = funnelStatus === "Healthy" ? 85 
+            : funnelStatus === "Warning" ? 60 
             : 35;
           
           const verdictTone = healthScore >= 70 ? "positive" : healthScore >= 50 ? "mixed" : "negative";
@@ -966,11 +1000,12 @@ Evaluate each ad individually and return the JSON output.`;
           const bestAds = sortedAds.slice(0, 3);
           const worstAds = sortedAds.slice(-3).reverse();
           
-          // Construct full AIInsights structure
+          // Map comprehensive response to existing frontend structure
           aiInsights = {
             insights: {
               healthScore,
-              quickVerdict: `Account ${metrics.primaryKpiLabel} is ${metrics.primaryKpiValue?.toFixed(2) || 'N/A'}. ${deepInsights.funnelHealth.description}`,
+              quickVerdict: comprehensiveResponse.insights?.conversionFunnel?.description || 
+                `Account ${metrics.primaryKpiLabel} is ${metrics.primaryKpiValue?.toFixed(2) || 'N/A'}.`,
               quickVerdictTone: verdictTone,
               bestPerformers: bestAds.map(a => ({
                 id: a.name,
@@ -991,15 +1026,28 @@ Evaluate each ad individually and return the JSON output.`;
               whatsWorking: [],
               whatsNotWorking: [],
               deepAnalysis: {
-                funnelHealth: deepInsights.funnelHealth,
-                opportunities: deepInsights.profitOpportunities || [],
-                moneyWasters: deepInsights.budgetLeaks || [],
+                funnelHealth: {
+                  status: funnelStatus,
+                  title: "Conversion Funnel",
+                  description: comprehensiveResponse.insights?.conversionFunnel?.description || "Analyzing funnel performance...",
+                  metricToWatch: comprehensiveResponse.insights?.conversionFunnel?.metricToWatch || metrics.primaryKpiKey?.toUpperCase()
+                },
+                opportunities: comprehensiveResponse.insights?.profitOpportunities || [],
+                moneyWasters: comprehensiveResponse.insights?.budgetLeaks || [],
                 creativeFatigue: []
               },
-              segmentAnalysis: null
+              segmentAnalysis: comprehensiveResponse.insights?.demographics || 
+                comprehensiveResponse.insights?.platforms || 
+                comprehensiveResponse.insights?.videoInsights ? {
+                demographics: comprehensiveResponse.insights?.demographics || null,
+                platforms: comprehensiveResponse.insights?.platforms || null,
+                videoInsights: comprehensiveResponse.insights?.videoInsights || null
+              } : null,
+              // Store recommendations for future use
+              recommendations: comprehensiveResponse.recommendations || null
             }
           };
-          console.log('✅ AI Insights generated successfully');
+          console.log('✅ Comprehensive AI Insights generated successfully');
        }
     } catch (e) {
       console.error("AI Error:", e);
