@@ -82,12 +82,18 @@ serve(async (req) => {
     const goal = requestData.goal;
     const budget = requestData.budget;
     const aov = requestData.productPrice || requestData.aov; // Map productPrice to aov
-    const industry = requestData.businessType || requestData.industry; // Map businessType to industry
+    // Try multiple fallbacks for industry, but don't hard-fail if it's missing
+    const industry =
+      requestData.businessType ||
+      requestData.industry ||
+      requestData.category ||
+      requestData.customer ||
+      'general';
     const description = requestData.businessName || requestData.description || '';
 
     console.log('✅ Extracted data:', { goal, budget, aov, industry, description });
 
-    if (!budget || !goal || !aov || !industry) {
+    if (!budget || !goal || !aov) {
       console.error('❌ Validation failed:', { budget, goal, aov, industry });
       throw new Error(`Missing required inputs. Received: budget=${budget}, goal=${goal}, aov=${aov}, industry=${industry}`);
     }
