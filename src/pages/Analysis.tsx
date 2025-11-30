@@ -282,44 +282,53 @@ const Analysis = () => {
             {/* Health Score & Verdict */}
             <Card className="p-6 border-l-4 border-l-primary relative overflow-hidden">
               <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-                {/* Score Circle */}
+                {/* Score Circle (Clean, no icon) */}
                 <div className="relative flex-shrink-0">
                   <div className={`h-24 w-24 rounded-full flex items-center justify-center border-4 text-3xl font-bold font-display
                     ${(insights?.healthScore || 0) >= 80 ? 'border-green-500 text-green-600' : 
                       (insights?.healthScore || 0) >= 50 ? 'border-yellow-500 text-yellow-600' : 'border-red-500 text-red-600'}`}>
                     {insights?.healthScore ?? "?"}
                   </div>
-                  {/* Score Label with Tooltip */}
-                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-background px-2 flex items-center gap-1">
+                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-background px-2">
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Score
                     </span>
+                  </div>
+                </div>
+                
+                {/* Text Section with Icon next to Badge */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-semibold">AI Verdict</h3>
+                    
+                    {/* Status Badge */}
+                    {insights?.quickVerdictTone === 'positive' && <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Healthy</Badge>}
+                    {insights?.quickVerdictTone === 'mixed' && <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Stable</Badge>}
+                    {insights?.quickVerdictTone === 'negative' && <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Critical</Badge>}
+
+                    {/* Info Icon & Tooltip */}
                     <TooltipProvider>
-                      <Tooltip>
+                      <Tooltip delayDuration={0}>
                         <TooltipTrigger asChild>
-                          <Info className="h-3 w-3 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+                          <button className="inline-flex items-center justify-center rounded-full hover:bg-muted/50 p-1 transition-colors">
+                            <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help" />
+                          </button>
                         </TooltipTrigger>
-                        <TooltipContent className="max-w-[250px] p-4 text-sm">
-                          <p className="font-semibold mb-2">How is this calculated?</p>
-                          <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
-                            <li><strong>ROAS Efficiency:</strong> Returns on Ad Spend vs account average.</li>
-                            <li><strong>CPA Health:</strong> Cost per Result compared to benchmarks.</li>
-                            <li><strong>Funnel Quality:</strong> CTR and Conversion Rate stability.</li>
-                          </ul>
+                        <TooltipContent side="right" align="start" className="w-[300px] sm:w-[400px] p-4 text-sm bg-popover border shadow-xl z-50">
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-base border-b pb-2">How is this calculated?</h4>
+                            <p className="text-muted-foreground">The Health Score (0-100) is an AI-weighted metric based on:</p>
+                            <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                              <li><strong>Efficiency (40%):</strong> comparing your ROAS/CPA against industry benchmarks.</li>
+                              <li><strong>Funnel Health (30%):</strong> analyzing the drop-off from Click to Purchase.</li>
+                              <li><strong>Consistency (30%):</strong> checking for stability in results over time.</li>
+                            </ul>
+                          </div>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                </div>
-                
-                {/* Text */}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-                    AI Verdict
-                    {insights?.quickVerdictTone === 'positive' && <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Healthy</Badge>}
-                    {insights?.quickVerdictTone === 'mixed' && <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Stable</Badge>}
-                    {insights?.quickVerdictTone === 'negative' && <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Critical</Badge>}
-                  </h3>
+
                   <p className="text-foreground/80 leading-relaxed text-lg">
                     {insights?.quickVerdict || "Waiting for analysis..."}
                   </p>
