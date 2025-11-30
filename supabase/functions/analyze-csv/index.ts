@@ -1217,12 +1217,16 @@ Analyze the data and return the comprehensive insights + recommendations JSON.`;
     }
 
     // --- J. Final Response ---
+    // Limit raw data to first 200 rows for performance
+    const rawDataLimit = csvData.slice(0, 200);
+    
     const finalResponse = {
        ok: true,
        rowCount: csvData.length,
        columnNames: Object.keys(csvData[0] || {}),
        metrics,
-       aiInsights: aiInsights
+       aiInsights: aiInsights,
+       rawData: rawDataLimit
     };
 
     console.log("FINAL RESPONSE:", JSON.stringify(finalResponse, null, 2));
