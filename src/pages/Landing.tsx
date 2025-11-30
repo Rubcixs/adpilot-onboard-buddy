@@ -1,32 +1,10 @@
 import { ArrowRight, Upload, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 const Landing = () => {
   const navigate = useNavigate();
-  const [testResponse, setTestResponse] = useState<string | null>(null);
-  const [isTesting, setIsTesting] = useState(false);
-
-  const handleTestClaude = async () => {
-    setIsTesting(true);
-    setTestResponse(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("test-claude");
-      if (error) throw error;
-      setTestResponse(data?.message || JSON.stringify(data));
-      toast.success("Claude API test successful!");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      setTestResponse(`Error: ${message}`);
-      toast.error("Claude API test failed");
-    } finally {
-      setIsTesting(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-hero">
@@ -147,26 +125,6 @@ const Landing = () => {
         {/* Trust Badge */}
         <div className="text-center mt-16 text-sm text-muted-foreground">
           <p>Powered by AI • Industry benchmarks • Expert insights</p>
-        </div>
-
-        {/* Temporary Test Button */}
-        <div className="mt-8 p-6 border border-dashed border-border rounded-lg max-w-md mx-auto bg-card/50">
-          <p className="text-sm text-muted-foreground mb-3 text-center">
-            🧪 Dev Test: Claude API Connection
-          </p>
-          <Button
-            onClick={handleTestClaude}
-            disabled={isTesting}
-            variant="outline"
-            className="w-full"
-          >
-            {isTesting ? "Testing..." : "Test Claude API"}
-          </Button>
-          {testResponse && (
-            <div className="mt-4 p-3 rounded bg-muted text-sm text-foreground break-words">
-              {testResponse}
-            </div>
-          )}
         </div>
       </main>
     </div>
